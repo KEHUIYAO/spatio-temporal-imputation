@@ -1,0 +1,33 @@
+
+#type: args
+
+train:
+  epochs: 200
+  batch_size: 16
+  lr: 1.0e-3
+
+diffusion:
+  layers: 4
+  channels: 64
+  diffusion_embedding_dim: 128
+  beta_start: 0.0001
+  beta_end: 0.5
+  num_steps: 50
+  schedule: "quad"
+  time_layer:
+    type: "longformer"
+    nheads: 8
+    hidden_size: 64
+    attention_window: 9
+  spatial_layer:
+    type: 'diffconv'
+    nheads: 8
+    hidden_size: 64
+    adj: './data/adj_matrix.npy'
+    order: 1
+
+model:
+  is_unconditional: 0
+  timeemb: 32
+  featureemb: 16
+  target_strategy: "mix"
