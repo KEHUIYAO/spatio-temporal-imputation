@@ -11,9 +11,12 @@ from scipy.spatial.distance import pdist, squareform
 from dataset import get_dataloader
 from dataset_tmax import generate_tmax_data
 from main_model import CSDI_Covariates
+from birnn import BiRNN
+from simple_imputer import MeanImputer, LinearInterpolationImputer
 from utils import train, evaluate
 
 parser = argparse.ArgumentParser(description="CSDI")
+parser.add_argument("--model", type=str, default='mean')
 parser.add_argument("--config", type=str, default="base_tmax.yaml")
 parser.add_argument('--device', default='cuda:0', help='Device for Attack')
 parser.add_argument("--modelfolder", type=str, default="")
@@ -40,7 +43,7 @@ print(json.dumps(config, indent=4))
 
 current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 foldername = (
-    "./save/tmax_validationindex" + str(args.validationindex) + "_" + current_time + "/"
+    "./save/tmax" + "_" + str(args.model) + "_" + current_time + "/"
 )
 
 print('model folder:', foldername)
@@ -64,26 +67,38 @@ train_loader, \
                               missing_pattern=config['model']['missing_pattern'])
 
 
-model = CSDI_Covariates(config, device, target_dim=1, covariate_dim=0).to(device)
+if args.model == 'CSDI':
+    model = CSDI_Covariates(config, device, target_dim=1, covariate_dim=0).to(device)
 
-if args.modelfolder == "":
-    train(
-        model,
-        config["train"],
-        train_loader,
-        valid_loader=valid_loader,
-        foldername=foldername,
-    )
-else:
-    model.load_state_dict(torch.load("./save/" + args.modelfolder + "/model.pth"))
-    train(
-        model,
-        config["train"],
-        train_loader,
-        valid_loader=valid_loader,
-        foldername=foldername,
-    )
+elif args.model == 'birnn':
+    model = BiRNN(covariate_size=0, config=config, device=device).to(device)
 
+elif args.model == 'mean':
+    model = MeanImputer(device=device)
+
+elif args.model == 'interpolation':
+    model = LinearInterpolationImputer(device=device)
+
+# these models needs to be trained
+if args.model in ['CSDI', 'birnn']:
+    if args.modelfolder == "":
+        train(
+            model,
+            config["train"],
+            train_loader,
+            valid_loader=valid_loader,
+            foldername=foldername,
+        )
+    else:
+        model.load_state_dict(torch.load("./save/" + args.modelfolder + "/model.pth"))
+        train(
+            model,
+            config["train"],
+            train_loader,
+            valid_loader=valid_loader,
+            foldername=foldername,
+        )
+# evaluate the model
 evaluate(
     model,
     test_loader,

@@ -59,7 +59,7 @@ class CSDI_base(nn.Module):
 
     def get_randmask(self, observed_mask):
         if self.missing_pattern is None or self.missing_pattern not in ['random', 'space_block', 'time_block']:
-            self.missing_pattern == 'random'
+            self.missing_pattern = 'random'
 
         if self.missing_pattern == 'random':  # randomly sample a mask for each batch
             rand_for_mask = torch.rand_like(observed_mask) * observed_mask

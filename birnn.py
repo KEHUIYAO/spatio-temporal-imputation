@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 class BiRNN(nn.Module):
-    def __init__(self, covariate_size, config, device, hidden_size=64, num_layers=1, dropout=0.0, task_type='ort'):
+    def __init__(self, covariate_size, config, device, hidden_size=64, num_layers=1, dropout=0.0, task_type='mit'):
         super(BiRNN, self).__init__()
         self.device = device
         self.target_strategy = config['model']['target_strategy']
@@ -195,8 +195,10 @@ class BiRNN(nn.Module):
         )
 
     def get_randmask(self, observed_mask):
+        if self.missing_pattern is None or self.missing_pattern not in ['random', 'time_block', 'space_block']:
+            self.missing_pattern = 'random'
 
-        if self.missing_pattern is None:
+        if self.missing_pattern == 'random':
             rand_for_mask = torch.rand_like(observed_mask) * observed_mask
             rand_for_mask = rand_for_mask.reshape(len(rand_for_mask), -1)
             for i in range(len(observed_mask)):
@@ -225,6 +227,7 @@ class BiRNN(nn.Module):
                 temp = torch.rand(size=(K, 1), device=self.device) < sample_ratio
                 # repeat the mask for all spatial points
                 cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
+
         return cond_mask
 
     def get_hist_mask(self, observed_mask, for_pattern_mask=None):
