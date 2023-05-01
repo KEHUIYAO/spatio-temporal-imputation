@@ -287,45 +287,20 @@ def get_dataloader(y,
     if missing_pattern == 'random':
         missing_mask = (rng.uniform(size=y.shape) > missing_data_ratio) & observation_mask  # missing mask equals 1 means observed, 0 means missing
     elif missing_pattern == 'block':
-        # Define the range of block sizes for missing values in the temporal axis
-        min_block_size = 0
-        max_block_size = L
-
-        # Create a mask with the same shape as the original array
-        mask = np.ones((B, L, K), dtype=bool)
-
-        # Randomly select the starting position and block size for the block along the last axis
-        block_sizes = rng.randint(min_block_size, max_block_size + 1, (B, K))
-        start_positions = [rng.randint(0, L - block_size + 1) for block_size in block_sizes.ravel()]
-        start_positions = np.array(start_positions).reshape(B, K)
-
-        # Set the desired block of missing values in the mask along the last axis
-        for b in range(B):
-            for k in range(K):
-                if block_sizes[b, k] > 0:
-                    mask[b, start_positions[b, k]:start_positions[b, k] + block_sizes[b, k], k] = False
-        temporal_mask = mask.copy()
-
-        # Define the range of block sizes for missing values in the spatial axis
-        min_block_size = 0
-        max_block_size = K
-
-        # Create a mask with the same shape as the original array
-        mask = np.ones((B, L, K), dtype=bool)
-
-        # Randomly select the starting position and block size for the block along the last axis
-        block_sizes = rng.randint(min_block_size, max_block_size + 1, (B, L))
-        start_positions = [rng.randint(0, K - block_size + 1) for block_size in block_sizes.ravel()]
-        start_positions = np.array(start_positions).reshape(B, L)
-
-        # Set the desired block of missing values in the mask along the last axis
-        for b in range(B):
-            for l in range(L):
-                if block_sizes[b, l] > 0:
-                    mask[b, l, start_positions[b, l]:start_positions[b, l] + block_sizes[b, l]] = False
-        spatial_mask = mask.copy()
-
-        missing_mask = temporal_mask & spatial_mask & observation_mask
+        missing_mask = np.ones_like(y, dtype=bool)
+        expected_missing_observations = int(missing_data_ratio * B * L * K)  # expected number of missing observations
+        # current number of missing observations
+        cur_missing_obs = 0
+        while cur_missing_obs < expected_missing_observations:
+            # randomly select a block of data to be missing
+            b = rng.randint(0, B)
+            l_block_size = rng.randint(0, L + 1)
+            k_block_size = rng.randint(0, K + 1)
+            l_start = rng.randint(0, L - l_block_size + 1)
+            k_start = rng.randint(0, K - k_block_size + 1)
+            missing_mask[b, l_start:l_start + l_block_size, k_start:k_start + k_block_size] = False
+            cur_missing_obs += l_block_size * k_block_size
+        missing_mask = missing_mask & observation_mask
 
     elif missing_pattern == 'space_block':  # at a given time point, all spatial locations are missing
         temp = rng.uniform(
@@ -337,19 +312,25 @@ def get_dataloader(y,
         missing_mask = np.repeat(temp, L, axis=1) & observation_mask  # randomly mask some data as missing
 
     elif missing_pattern == 'prediction':
-        # randomly mask the last 20% time steps of the data as missing
+        # randomly mask the last missing_ratio percent of time steps of the data as missing
         missing_mask = np.ones_like(y, dtype=bool)
-        temp = np.argwhere(rng.uniform(size=y.shape[2]) < missing_data_ratio).flatten()
+        expected_missing_observations = int(missing_data_ratio * B * L * K)  # expected number of missing observations
+        # current number of missing observations
+        cur_missing_obs = 0
 
-        for i in range(y.shape[0]):
-            for j in range(y.shape[2]):
-                if j in temp:
-                    missing_mask[i, -10:, j] = False
+        while cur_missing_obs < expected_missing_observations:
+            # randomly select a block of data to be missing
+            b = rng.randint(0, B)
+            l = rng.randint(0, L)
+            k = rng.randint(0, K)
+            missing_mask[b, l:L, k] = False
+            cur_missing_obs += (L-l)
+
         missing_mask = missing_mask & observation_mask
 
+    print("actual missing ratio in data %.4f"%(np.sum(~observation_mask) / observation_mask.size))
+    print("after artifically setting some data to test data, the missing ratio is %.4f"%(np.sum(~missing_mask) / missing_mask.size))
 
-    missing_data_ratio = np.sum(~missing_mask) / missing_mask.size
-    print(missing_data_ratio)  # print the actual missing data ratio, including the original missing plus the artificially missing
     # copy y to y_missing
     y_missing = y.copy()
 
@@ -360,45 +341,21 @@ def get_dataloader(y,
     if missing_pattern == 'random':
         gt_mask = (rng.uniform(size=y_missing.shape) < training_data_ratio) & missing_mask  # gt_mask True means the data is used for training, False means the data is used for validation
     elif missing_pattern == 'block':
-        # Define the range of block sizes for missing values in the temporal axis
-        min_block_size = 0
-        max_block_size = L
+        gt_mask = np.ones_like(y, dtype=bool)
+        expected_missing_observations = int((1-training_data_ratio) * B * L * K)  # expected number of missing observations
+        # current number of missing observations
+        cur_missing_obs = 0
+        while cur_missing_obs < expected_missing_observations:
+            # randomly select a block of data to be missing
+            b = rng.randint(0, B)
+            l_block_size = rng.randint(0, L + 1)
+            k_block_size = rng.randint(0, K + 1)
+            l_start = rng.randint(0, L - l_block_size + 1)
+            k_start = rng.randint(0, K - k_block_size + 1)
+            gt_mask[b, l_start:l_start + l_block_size, k_start:k_start + k_block_size] = False
+            cur_missing_obs += l_block_size * k_block_size
+        gt_mask = gt_mask & missing_mask
 
-        # Create a mask with the same shape as the original array
-        mask = np.ones((B, L, K), dtype=bool)
-
-        # Randomly select the starting position and block size for the block along the last axis
-        block_sizes = rng.randint(min_block_size, max_block_size + 1, (B, K))
-        start_positions = [rng.randint(0, L - block_size + 1) for block_size in block_sizes.ravel()]
-        start_positions = np.array(start_positions).reshape(B, K)
-
-        # Set the desired block of missing values in the mask along the last axis
-        for b in range(B):
-            for k in range(K):
-                if block_sizes[b, k] > 0:
-                    mask[b, start_positions[b, k]:start_positions[b, k] + block_sizes[b, k], k] = False
-        temporal_mask = mask.copy()
-
-        # Define the range of block sizes for missing values in the spatial axis
-        min_block_size = 0
-        max_block_size = K
-
-        # Create a mask with the same shape as the original array
-        mask = np.ones((B, L, K), dtype=bool)
-
-        # Randomly select the starting position and block size for the block along the last axis
-        block_sizes = rng.randint(min_block_size, max_block_size + 1, (B, L))
-        start_positions = [rng.randint(0, K - block_size + 1) for block_size in block_sizes.ravel()]
-        start_positions = np.array(start_positions).reshape(B, L)
-
-        # Set the desired block of missing values in the mask along the last axis
-        for b in range(B):
-            for l in range(L):
-                if block_sizes[b, l] > 0:
-                    mask[b, l, start_positions[b, l]:start_positions[b, l] + block_sizes[b, l]] = False
-        spatial_mask = mask.copy()
-
-        gt_mask = temporal_mask & spatial_mask & missing_mask
 
     elif missing_pattern == 'space_block':
         temp = rng.uniform(
@@ -411,12 +368,20 @@ def get_dataloader(y,
         gt_mask = np.repeat(temp, L, axis=1) & missing_mask  # randomly mask some data as missing
 
     elif missing_pattern == 'prediction':
-        gt_mask = np.ones_like(y_missing, dtype=bool)
-        temp = np.argwhere(rng.uniform(size=y.shape[2]) > training_data_ratio).flatten()
-        for i in range(y.shape[0]):
-            for j in range(y.shape[2]):
-                if j in temp:
-                    gt_mask[i, -10:, j] = False
+        # randomly mask the last missing_ratio percent of time steps of the data as missing
+        gt_mask = np.ones_like(y, dtype=bool)
+        expected_missing_observations = int((1-training_data_ratio) * B * L * K)  # expected number of missing observations
+        # current number of missing observations
+        cur_missing_obs = 0
+
+        while cur_missing_obs < expected_missing_observations:
+            # randomly select a block of data to be missing
+            b = rng.randint(0, B)
+            l = rng.randint(0, L)
+            k = rng.randint(0, K)
+            gt_mask[b, l:L, k] = False
+            cur_missing_obs += (L - l)
+
         gt_mask = gt_mask & missing_mask
 
 

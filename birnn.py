@@ -195,7 +195,7 @@ class BiRNN(nn.Module):
         )
 
     def get_randmask(self, observed_mask):
-        if self.missing_pattern is None or self.missing_pattern not in ['random', 'time_block', 'space_block']:
+        if self.missing_pattern is None:
             self.missing_pattern = 'random'
 
         if self.missing_pattern == 'random':
@@ -227,6 +227,19 @@ class BiRNN(nn.Module):
                 temp = torch.rand(size=(K, 1), device=self.device) < sample_ratio
                 # repeat the mask for all spatial points
                 cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
+        elif self.missing_pattern == 'block':
+            B, K, L = observed_mask.size()  # (B, K, L)
+            cond_mask = observed_mask.clone()
+            # each batch has a different missing ratio
+            for i in range(len(observed_mask)):
+                # randomly generate a number from 0 to 1
+                l_block_size = np.random.randint(0, L + 1)
+                k_block_size = np.random.randint(0, K + 1)
+                l_start = np.random.randint(0, L - l_block_size + 1)
+                k_start = np.random.randint(0, K - k_block_size + 1)
+                cond_mask[i, k_start:k_start + k_block_size, l_start:l_start + l_block_size] = 0
+        else:
+            raise NotImplementedError
 
         return cond_mask
 

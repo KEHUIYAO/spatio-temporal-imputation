@@ -16,7 +16,7 @@ from simple_imputer import MeanImputer, LinearInterpolationImputer
 from utils import train, evaluate
 
 parser = argparse.ArgumentParser(description="CSDI")
-parser.add_argument("--model", type=str, default='mean')
+parser.add_argument("--model", type=str, default='CSDI')
 parser.add_argument("--config", type=str, default="base_tmax.yaml")
 parser.add_argument('--device', default='cuda:0', help='Device for Attack')
 parser.add_argument("--modelfolder", type=str, default="")

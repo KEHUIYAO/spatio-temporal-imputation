@@ -30,5 +30,5 @@ model:
   is_unconditional: 0
   timeemb: 32
   featureemb: 16
-  target_strategy: "mix"
+  target_strategy: "random"
   missing_pattern: "block"
