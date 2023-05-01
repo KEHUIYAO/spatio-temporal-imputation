@@ -42,7 +42,7 @@ def train(
     config,
     train_loader,
     valid_loader=None,
-    valid_epoch_interval=20,
+    valid_epoch_interval=100,
     foldername="",
 ):
     # # pytorch-lightning
@@ -212,14 +212,15 @@ def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldernam
                 mae_total += mae_current.sum().item()
                 evalpoints_total += eval_points.sum().item()
 
-                it.set_postfix(
-                    ordered_dict={
-                        "rmse_total": np.sqrt(mse_total / evalpoints_total),
-                        "mae_total": mae_total / evalpoints_total,
-                        "batch_no": batch_no,
-                    },
-                    refresh=True,
-                )
+                if evalpoints_total > 0:
+                    it.set_postfix(
+                        ordered_dict={
+                            "rmse_total": np.sqrt(mse_total / evalpoints_total),
+                            "mae_total": mae_total / evalpoints_total,
+                            "batch_no": batch_no,
+                        },
+                        refresh=True,
+                    )
 
             with open(
                 foldername + "/generated_outputs_nsample" + str(nsample) + ".pk", "wb"
