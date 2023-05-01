@@ -5,6 +5,7 @@ import torch.nn as nn
 class BiRNN(nn.Module):
     def __init__(self, covariate_size, config, device, hidden_size=64, num_layers=1, dropout=0.0, task_type='mit'):
         super(BiRNN, self).__init__()
+        self.config = config
         self.device = device
         self.target_strategy = config['model']['target_strategy']
         self.covariate_size = covariate_size
@@ -232,9 +233,16 @@ class BiRNN(nn.Module):
             cond_mask = observed_mask.clone()
             # each batch has a different missing ratio
             for i in range(len(observed_mask)):
-                # randomly generate a number from 0 to 1
-                l_block_size = np.random.randint(0, L + 1)
-                k_block_size = np.random.randint(0, K + 1)
+                # if block size is provided in config, use it
+                if 'time_block_size' in self.config['model']:
+                    l_block_size = self.config['model']['time_block_size']
+                else:
+                    l_block_size = np.random.randint(0, L + 1)
+
+                if 'space_block_size' in self.config['model']:
+                    k_block_size = self.config['model']['space_block_size']
+                else:
+                    k_block_size = np.random.randint(0, K + 1)
                 l_start = np.random.randint(0, L - l_block_size + 1)
                 k_start = np.random.randint(0, K - k_block_size + 1)
                 cond_mask[i, k_start:k_start + k_block_size, l_start:l_start + l_block_size] = 0

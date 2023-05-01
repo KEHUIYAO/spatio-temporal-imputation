@@ -8,7 +8,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 
-from dataset import get_dataloader
+from dataloader import get_dataloader
 from dataset_tmax import generate_tmax_data
 from main_model import CSDI_Covariates
 from birnn import BiRNN
@@ -64,7 +64,9 @@ train_loader, \
                               training_data_ratio=0.8,
                               batch_size=config["train"]["batch_size"],
                               device=device,
-                              missing_pattern=config['model']['missing_pattern'])
+                              missing_pattern=config['model']['missing_pattern'],
+                              time_block_size=config['model']['time_block_size'],
+                              space_block_size=config['model']['space_block_size'])
 
 
 if args.model == 'CSDI':

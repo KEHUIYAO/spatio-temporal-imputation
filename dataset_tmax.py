@@ -23,7 +23,7 @@ def generate_tmax_data():
     return y, y_mean, y_std
 
 if __name__ == '__main__':
-    from dataset import get_dataloader
+    from dataloader import get_dataloader
     y, y_mean, y_std = generate_tmax_data()
     print(y.shape)
 

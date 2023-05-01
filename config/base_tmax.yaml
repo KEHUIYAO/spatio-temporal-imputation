@@ -32,3 +32,5 @@ model:
   featureemb: 16
   target_strategy: "random"
   missing_pattern: "block"
+  time_block_size: 5
+  space_block_size: 1

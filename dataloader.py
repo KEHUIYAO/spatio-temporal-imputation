@@ -294,8 +294,15 @@ def get_dataloader(y,
         while cur_missing_obs < expected_missing_observations:
             # randomly select a block of data to be missing
             b = rng.randint(0, B)
-            l_block_size = rng.randint(0, L + 1)
-            k_block_size = rng.randint(0, K + 1)
+            # if block size is provided in **kwargs, use it, otherwise randomly select a block size
+            if 'time_block_size' in kwargs:
+                l_block_size = kwargs['time_block_size']
+            else:
+                l_block_size = rng.randint(0, L + 1)
+            if 'space_block_size' in kwargs:
+                k_block_size = kwargs['space_block_size']
+            else:
+                k_block_size = rng.randint(0, K + 1)
             l_start = rng.randint(0, L - l_block_size + 1)
             k_start = rng.randint(0, K - k_block_size + 1)
             missing_mask[b, l_start:l_start + l_block_size, k_start:k_start + k_block_size] = False
