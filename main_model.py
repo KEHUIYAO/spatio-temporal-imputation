@@ -96,6 +96,9 @@ class CSDI_base(nn.Module):
             cond_mask = observed_mask.clone()
             # each batch has a different missing ratio
             for i in range(len(observed_mask)):
+                sample_ratio = np.random.rand()  # missing ratio
+                expected_num_masked = round(K * L * sample_ratio)
+                cur_num_masked = 0
                 # if block size is provided in config, use it
                 if 'time_block_size' in self.config['model']:
                     l_block_size = self.config['model']['time_block_size']
@@ -106,9 +109,13 @@ class CSDI_base(nn.Module):
                     k_block_size = self.config['model']['space_block_size']
                 else:
                     k_block_size = np.random.randint(0, K+1)
-                l_start = np.random.randint(0, L-l_block_size+1)
-                k_start = np.random.randint(0, K-k_block_size+1)
-                cond_mask[i, k_start:k_start+k_block_size, l_start:l_start+l_block_size] = 0
+
+                while cur_num_masked < expected_num_masked:
+                    l_start = np.random.randint(0, L-l_block_size+1)
+                    k_start = np.random.randint(0, K-k_block_size+1)
+                    cond_mask[i, k_start:k_start+k_block_size, l_start:l_start+l_block_size] = 0
+                    cur_num_masked += l_block_size * k_block_size
+
 
         else:
             raise NotImplementedError
