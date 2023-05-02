@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader, Dataset
 from sklearn.preprocessing import OneHotEncoder
+import matplotlib.pyplot as plt
 
 
 class SMDataset(Dataset):
@@ -223,6 +224,62 @@ def save_data():
         np.save('../data/y_' + str(index) + '.npy', y)
         np.save('../data/X_static_' + str(index) + '.npy', X_static)
         np.save('../data/X_varying_' + str(index) + '.npy', X_varying)
+
+
+def visualize_index(ind, n_points=1):
+    y = np.load('../soil_moisture/data/y_' + str(ind) + '.npy')  # 1296, 1095
+    X_varying = np.load('../soil_moisture/data/X_varying_' + str(ind) + '.npy')  # 1296, 1095, 7
+    X_static = np.load('../soil_moisture/data/X_static_' + str(ind) + '.npy')  # 1296, 35
+    K, L = y.shape
+
+    # randomly select some spatial points
+    np.random.seed(0)
+    idx = np.random.choice(y.shape[0], n_points, replace=False)
+    y = y[idx, :]
+    smap_36km = X_varying[idx, :, 0]
+    dpt = X_varying[idx, :, 1]
+    precip = X_varying[idx, :, 2]
+    sp = X_varying[idx, :, 3]
+    tmin = X_varying[idx, :, -3]
+    tmax = X_varying[idx, :, -2]  # if tmax -273.15 < 4, then the ground soil moisture is not sensible
+    wind = X_varying[idx, :, -1]
+
+
+
+    plt.rcParams["font.size"] = 16
+
+
+    for k in range(n_points):
+        fig, axes = plt.subplots(nrows=8, ncols=1, sharex=True, constrained_layout=True, figsize=(24.0, 36.0))
+        fig.delaxes(axes[-1])
+
+        axes[0].scatter(np.arange(L), y[k, :], color='r')
+        axes[1].scatter(np.arange(L), smap_36km[k, :], color='r')
+        axes[2].scatter(np.arange(L), dpt[k, :], color='g')
+        axes[3].scatter(np.arange(L), precip[k, :], color='b')
+        axes[4].scatter(np.arange(L), sp[k, :], color='b')
+        axes[5].scatter(np.arange(L), tmin[k, :], color='b')
+        axes[6].scatter(np.arange(L), tmax[k, :], color='b')
+        axes[6].axhline(y=4+273.15, color='k', linestyle='--')  # plot a horizontal line at 4 + 273.15
+        axes[7].scatter(np.arange(L), wind[k, :], color='b')
+
+        axes[0].set_ylabel('ground soil moisture')
+        axes[1].set_ylabel('smap 36km')
+        axes[2].set_ylabel('dpt')
+        axes[3].set_ylabel('precip')
+        axes[4].set_ylabel('sp')
+        axes[5].set_ylabel('tmin')
+        axes[6].set_ylabel('tmax')
+        axes[7].set_ylabel('wind')
+
+        # Display the plot
+        # plt.show()
+        # save figure
+        fig.savefig('../soil_moisture/figures/visualize_index_' + str(ind) + '_' + str(k) + '.png', dpi=300)
+
+        # close figure
+        plt.close(fig)
+        plt.clf()
 
 
 def prepare_data(is_train=True):
