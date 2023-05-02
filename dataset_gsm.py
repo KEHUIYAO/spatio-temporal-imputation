@@ -244,10 +244,7 @@ def visualize_index(ind, n_points=1):
     tmax = X_varying[idx, :, -2]  # if tmax -273.15 < 4, then the ground soil moisture is not sensible
     wind = X_varying[idx, :, -1]
 
-
-
     plt.rcParams["font.size"] = 16
-
 
     for k in range(n_points):
         fig, axes = plt.subplots(nrows=8, ncols=1, sharex=True, constrained_layout=True, figsize=(24.0, 36.0))
@@ -283,6 +280,7 @@ def visualize_index(ind, n_points=1):
 
 
 def prepare_data(is_train=True):
+    rng = np.random.RandomState(0)
 
     if is_train:
         data_index = [  3,   5,  12, 268,  15,  20,  22, 288, 290, 291, 296, 297, 298,
@@ -291,33 +289,32 @@ def prepare_data(is_train=True):
            448, 197, 459, 460, 224, 485, 486, 231, 487, 232, 491, 493, 253,
            255,  23,  27,  32, 285, 294, 243, 247, 256, 432, 444, 457]
     else:
-        data_index = [269,  14, 287, 308, 352, 409, 451, 199, 481,  36, 362, 245]
+        data_index = [269, 14, 287, 308, 352, 409, 451, 199, 481, 36, 362, 245]
 
     # randomly choose from training_data_index
-    #data_index = np.random.choice(training_data_index, num_index, replace=False)
-
+    # data_index = np.random.choice(training_data_index, num_index, replace=False)
 
     # load data
     y_list = []
     X_list = []
     K = 1296
-    L = 1024
+    L = 1095
     new_order = reorder_spatial_index(36, 36, 6, 6)
     new_order = new_order[:, 0] * 36 + new_order[:, 1]
     for ind in data_index:
-        y = np.load('../soil_moisture/data/y_'+str(ind)+'.npy')  # 1296, 1095
-        X_varying = np.load('../soil_moisture/data/X_varying_'+str(ind)+'.npy')  # 1296, 1095, 7
-        X_static = np.load('../soil_moisture/data/X_static_'+str(ind)+'.npy')  # 1296, 35
+        # print ind
+        print('-----------------processing index: ', ind, '-----------------')
+        y = np.load('../soil_moisture/data/y_' + str(ind) + '.npy')  # 1296, 1095
+        # print y's shape
+        print('data shape: ', y.shape)
+
+        X_varying = np.load('../soil_moisture/data/X_varying_' + str(ind) + '.npy')  # 1296, 1095, 7
+        X_static = np.load('../soil_moisture/data/X_static_' + str(ind) + '.npy')  # 1296, 35
 
         # if spatial dimension is not 36x36=1296, discard this data
         if y.shape[0] != K:
+            print('spatial dimension is not 36x36=1296, discard this data')
             continue
-
-        print('process index %d' % ind)
-
-        # if tmin (one of the covariate in X_varying) is smaller than 4, make the corresponding y as nan
-        frozen_mask = X_varying[:, :, -3] - 273.15 < 4
-        y[frozen_mask] = np.nan
 
         # reorder
         y = y[new_order, :L]  # K, L
@@ -325,44 +322,91 @@ def prepare_data(is_train=True):
         # repeat X_static to match the shape of X_varying
         X_static = np.repeat(X_static[new_order, np.newaxis, :], L, axis=1)  # K, L, *
 
-        y_list.append(y)
-        X_list.append(np.concatenate([X_varying, X_static], axis=-1))
+        # y is three years soil moisture data, first of all, we split into three chunks
+        y = np.split(y, 3, axis=1)
+        X_varying = np.split(X_varying, 3, axis=1)
+        X_static = np.split(X_static, 3, axis=1)
 
+        seq_len = 72  # the length of each time series
 
-    y = np.stack(y_list, axis=0)  # B, K, L
-    X = np.stack(X_list, axis=0)  # B, K, L, C
+        for i in range(3):
+            print('process chunk %d' % i)
+            # if tmin (one of the covariate in X_varying) is smaller than 4, make the corresponding y as nan
+            non_frozen_mask = X_varying[i][0, :, -3] - 273.15 > 4  # L//3
+            # for each chunk, we discard some data
+            y[i] = y[i][:, non_frozen_mask]  # K, *
+            X_varying[i] = X_varying[i][:, non_frozen_mask, :]  # K, *, *
+            X_static[i] = X_static[i][:, non_frozen_mask, :]  # K, *, *
+
+            # if the chunk size is larger than seq_len, randomly select a time series of length seq_len
+            print('legnth of chunk %d is %d' % (i, y[i].shape[1]))
+            if y[i].shape[1] > seq_len:
+                start_ind = rng.randint(0, y[i].shape[1] - seq_len)
+                y_list.append(y[i][:, start_ind:start_ind + seq_len])
+                temp = np.concatenate([X_varying[i][:, start_ind:start_ind + seq_len, :],
+                                       X_static[i][:, start_ind:start_ind + seq_len, :]], axis=-1)
+                X_list.append(temp)
+
+    y = np.stack(y_list, axis=0)  # B, K, seq_len
+    X = np.stack(X_list, axis=0)  # B, K, seq_len, C
     B = y.shape[0]
     C = X.shape[-1]
 
     # reshape
-    y = y.reshape(B, 36, 36, 8, 128)  # B, 36, 36, 8, 128
-    y = y.transpose(0, 1, 3, 2, 4)  # B, 36, 8, 36, 128
-    y = y.reshape(B*36*8, 36, 128)  # B*36*8, 36, 128, which is B*, K*, L*
+    y = y.reshape(B, 36, 36, seq_len)  # B, 36, 36, seq_len
+    y = y.reshape(B * 36, 36, seq_len)  # B*36, 36, seq_len, which is B*, K*, L*
 
-    X = X.reshape(B, 36, 36, 8, 128, C)  # B, 36, 36, 8, 128, C
-    X = X.transpose(0, 1, 3, 2, 4, 5)  # B, 36, 8, 36, 128, C
-    X = X.reshape(B*36*8, 36, 128, C)  # B*36*8, 36, 128, C, which is B*, K*, L*, C
+    X = X.reshape(B, 36, 36, seq_len, C)  # B, 36, 36, seq_len, C
+    X = X.reshape(B * 36, 36, seq_len, C)  # B*36, 36, seq_len, C, which is B*, K*, L*, C
 
     # standardize y_train
     y_mean = np.nanmean(y)
     y_std = np.nanstd(y)
     y_standardized = (y - y_mean) / y_std
 
+    print('y shape is:', y_standardized.shape)
+
     observation_mask = ~np.isnan(y_standardized)  # True means observed, False means missing
 
     # standardize X_train for each feature C
     X_mean = np.nanmean(X, axis=(0, 1, 2))
     X_std = np.nanstd(X, axis=(0, 1, 2))
-    X_standardized = (X - X_mean) / (X_std+1e-8)
+    X_standardized = (X - X_mean) / (X_std + 1e-8)
 
     # fill all missing values in X_standardized with 0
     X_standardized[np.isnan(X_standardized)] = 0
 
+    print('X shape is: ', X_standardized.shape)
+
     # save y_standardized, X_standardized, y_mean, y_std, observation_mask in one file
     if is_train:
-        np.savez('./data/dataset_train_gsm.npz', y_standardized=y_standardized, X_standardized=X_standardized, y_mean=y_mean, y_std=y_std, observation_mask=observation_mask)
+        np.savez('./data/dataset_train_gsm.npz', y_standardized=y_standardized, X_standardized=X_standardized,
+                 y_mean=y_mean, y_std=y_std, observation_mask=observation_mask)
     else:
-        np.savez('./data/dataset_test_gsm.npz', y_standardized=y_standardized, X_standardized=X_standardized, y_mean=y_mean, y_std=y_std, observation_mask=observation_mask)
+        np.savez('./data/dataset_test_gsm.npz', y_standardized=y_standardized, X_standardized=X_standardized,
+                 y_mean=y_mean, y_std=y_std, observation_mask=observation_mask)
+
+    return y_standardized, y_mean, y_std, X_standardized, observation_mask
+
+
+def obtain_a_subset_of_data():
+    data = np.load('./data/dataset_train_gsm.npz')
+    y_standardized = data['y_standardized']  # B, K, L
+    X_standardized = data['X_standardized']  # B, K, L, C
+    observation_mask = data['observation_mask']  # B, K, L
+    y_mean = data['y_mean']
+    y_std = data['y_std']
+
+    # randomly select 1/10 of the data
+    rng = np.random.RandomState(0)
+    B = y_standardized.shape[0]
+    ind = rng.choice(B, B // 10, replace=False)
+    y_standardized = y_standardized[ind]
+    X_standardized = X_standardized[ind]
+    observation_mask = observation_mask[ind]
+
+    np.savez('./data/dataset_train_subset_gsm.npz', y_standardized=y_standardized, X_standardized=X_standardized,
+             y_mean=y_mean, y_std=y_std, observation_mask=observation_mask)
 
 
 def get_dataloader(missing_data_ratio, training_data_ratio, batch_size, device, seed=0):
