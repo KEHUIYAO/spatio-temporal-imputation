@@ -30,7 +30,7 @@ model:
   is_unconditional: 0
   timeemb: 32
   featureemb: 16
-  target_strategy: "random"
-  missing_pattern: "random"
-  time_block_size: 5
+  target_strategy: "mix"
+  missing_pattern: "block"
+  time_block_size: 10
   space_block_size: 1

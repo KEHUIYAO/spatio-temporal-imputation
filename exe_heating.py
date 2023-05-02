@@ -52,7 +52,7 @@ with open(foldername + "config.json", "w") as f:
     json.dump(config, f, indent=4)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-y, y_mean, y_std, observation_mask, missing_mask = generate_heating_data()
+y, y_mean, y_std, observation_mask = generate_heating_data()
 train_loader, \
     valid_loader, \
     test_loader, \
@@ -61,7 +61,6 @@ train_loader, \
                               y_mean,
                               y_std,
                               observation_mask=observation_mask,
-                              missing_mask=missing_mask,
                               missing_data_ratio=0.2,
                               training_data_ratio=0.8,
                               batch_size=config["train"]["batch_size"],
