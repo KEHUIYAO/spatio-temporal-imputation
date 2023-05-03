@@ -241,7 +241,7 @@ def visualize_index(ind, n_points=1):
     precip = X_varying[idx, :, 2]
     sp = X_varying[idx, :, 3]
     tmin = X_varying[idx, :, -3]
-    tmax = X_varying[idx, :, -2]  # if tmax -273.15 < 4, then the ground soil moisture is not sensible
+    tmax = X_varying[idx, :, -2]  # if tmin -273.15 < 4, then the ground soil moisture is not sensible
     wind = X_varying[idx, :, -1]
 
     plt.rcParams["font.size"] = 16
@@ -256,8 +256,8 @@ def visualize_index(ind, n_points=1):
         axes[3].scatter(np.arange(L), precip[k, :], color='b')
         axes[4].scatter(np.arange(L), sp[k, :], color='b')
         axes[5].scatter(np.arange(L), tmin[k, :], color='b')
-        axes[6].scatter(np.arange(L), tmax[k, :], color='b')
-        axes[6].axhline(y=4+273.15, color='k', linestyle='--')  # plot a horizontal line at 4 + 273.15
+        axes[5].axhline(y=4 + 273.15, color='k', linestyle='--')  # plot a horizontal line at 4 + 273.15
+        axes[6].scatter(np.arange(L), tmax[k, :], color='')
         axes[7].scatter(np.arange(L), wind[k, :], color='b')
 
         axes[0].set_ylabel('ground soil moisture')
@@ -327,7 +327,7 @@ def prepare_data(is_train=True):
         X_varying = np.split(X_varying, 3, axis=1)
         X_static = np.split(X_static, 3, axis=1)
 
-        seq_len = 72  # the length of each time series
+        seq_len = 128  # the length of each time series
 
         for i in range(3):
             print('process chunk %d' % i)
@@ -339,7 +339,7 @@ def prepare_data(is_train=True):
             X_static[i] = X_static[i][:, non_frozen_mask, :]  # K, *, *
 
             # if the chunk size is larger than seq_len, randomly select a time series of length seq_len
-            print('legnth of chunk %d is %d' % (i, y[i].shape[1]))
+            print('length of chunk %d is %d' % (i, y[i].shape[1]))
             if y[i].shape[1] > seq_len:
                 start_ind = rng.randint(0, y[i].shape[1] - seq_len)
                 y_list.append(y[i][:, start_ind:start_ind + seq_len])
@@ -408,69 +408,28 @@ def obtain_a_subset_of_data():
     np.savez('./data/dataset_train_subset_gsm.npz', y_standardized=y_standardized, X_standardized=X_standardized,
              y_mean=y_mean, y_std=y_std, observation_mask=observation_mask)
 
-
-def get_dataloader(missing_data_ratio, training_data_ratio, batch_size, device, seed=0):
-    data = np.load('./data/dataset_train_subset_gsm.npz')
-    # data = np.load('./data/dataset_train_gsm.npz')
-    print('data loaded')
-    # load data
+def get_global_soil_moisture_data():
+    data = np.load('./data/dataset_train_gsm.npz')
     y_standardized = data['y_standardized']  # B, K, L
     X_standardized = data['X_standardized']  # B, K, L, C
     observation_mask = data['observation_mask']  # B, K, L
     y_mean = data['y_mean']
     y_std = data['y_std']
-
-    print('y_mean is %f' % y_mean)
-    print('y_std is %f' % y_std)
-
     y_mean = float(y_mean)
     y_std = float(y_std)
+    return y_standardized, y_mean, y_std, X_standardized, observation_mask
 
-    B = y_standardized.shape[0]
-    K = y_standardized.shape[1]
-    L = y_standardized.shape[2]
-    C = X_standardized.shape[-1]
+def get_global_soil_moisture_data_subset():
+    data = np.load('./data/dataset_train_subset_gsm.npz')
+    y_standardized = data['y_standardized']  # B, K, L
+    X_standardized = data['X_standardized']  # B, K, L, C
+    observation_mask = data['observation_mask']  # B, K, L
+    y_mean = data['y_mean']
+    y_std = data['y_std']
+    y_mean = float(y_mean)
+    y_std = float(y_std)
+    return y_standardized, y_mean, y_std, X_standardized, observation_mask
 
-    # permute to y and observation mask to B, L, K and X to B, L, K, C
-    y_standardized = y_standardized.transpose(0, 2, 1)  # B, L, K
-    observation_mask = observation_mask.transpose(0, 2, 1)  # B, L, K
-    X_standardized = X_standardized.transpose(0, 2, 1, 3)  # B, L, K, C
-
-    # randomly mask some data as missing using random state
-    rng = np.random.RandomState(seed=seed)
-    temp = rng.uniform(
-        size=(B, L, 1)) > missing_data_ratio  # all spatial points are either observed or missing at tone time point
-    missing_mask = np.repeat(temp, K, axis=2) & observation_mask  # randomly mask some data as missing
-
-    # copy y_standardized to y_missing_standardized
-    y_missing_standardized = y_standardized.copy()
-
-    # replace all missing values and artificially missing values with 0
-    y_missing_standardized[~missing_mask] = 0
-
-    # create gt_mask, which additionally mask some data in the remaining non-missing data
-    # gt_mask = (rng.uniform(size=y_missing_standardized.shape) < training_data_ratio) & missing_mask  # gt_mask True means used for training
-    temp = rng.uniform(
-        size=(B, L, 1)) < training_data_ratio  # all spatial points are either observed or missing at tone time point
-    gt_mask = np.repeat(temp, K, axis=2) & missing_mask  # gt_mask True means used for training
-
-    # gt_mask True for training data
-    y_training = y_missing_standardized.copy()
-    y_training[~gt_mask] = 0
-
-    training_dataset = SMDataset(y_training, X_standardized, gt_mask, gt_mask)
-    training_loader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-    validation_dataset = SMDataset(y_missing_standardized, X_standardized, missing_mask, gt_mask)
-    validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-
-    # replace missing values in the real data with 0
-    y_standardized[~observation_mask] = 0
-    # create test dataset
-    # we use the complete data as the test data
-    test_dataset = SMDataset(y_standardized, X_standardized, observation_mask, missing_mask)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-    print("create dataloader successfully!")
-    return training_loader, validation_loader, test_loader, y_std, y_mean
 
 
 
@@ -487,19 +446,5 @@ if __name__ == '__main__':
     y_std = data['y_std']
 
     # select a random subset of the data
-    B = y_standardized.shape[0]
-    K = y_standardized.shape[1]
-    L = y_standardized.shape[2]
-    C = X_standardized.shape[-1]
-    rng = np.random.RandomState(seed=0)
-    idx = rng.choice(B, 1000, replace=False)
-    y_standardized = y_standardized[idx, ...]
-    X_standardized = X_standardized[idx, ...]
-    observation_mask = observation_mask[idx, ...]
-
-    # save the subset of the data to a new file
-    np.savez('./data/dataset_train_subset_gsm.npz', y_standardized=y_standardized, X_standardized=X_standardized, y_mean=y_mean, y_std=y_std, observation_mask=observation_mask)
-
-
-
+    obtain_a_subset_of_data()
 
