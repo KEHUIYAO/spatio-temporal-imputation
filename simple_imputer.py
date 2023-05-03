@@ -41,9 +41,9 @@ class MeanImputer():
         B = training_data.shape[0]
 
         for b in range(B):
-            # training_data[b, (observed_mask[b] - gt_mask[b]).bool()] = torch.mean(training_data[b, gt_mask[b].bool()])
+            training_data[b, (observed_mask[b] - gt_mask[b]).bool()] = torch.mean(training_data[b, gt_mask[b].bool()])
 
-            training_data[b, (observed_mask[b] - gt_mask[b]).bool()] = torch.mean(observed_data[b, target_mask[b].bool()])
+            # training_data[b, (observed_mask[b] - gt_mask[b]).bool()] = torch.mean(observed_data[b, target_mask[b].bool()])
 
 
             # it is possible that after imputation, the training data still contains nan values, this is becuase the data you use to impute contains all nan. Next, we replace the remaining nan values with 0
