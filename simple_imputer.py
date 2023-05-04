@@ -93,7 +93,9 @@ class LinearInterpolationImputer():
 
         for b in range(B):
             for k in range(K):
-               training_data[b, :, k] = pd.Series(training_data[b, :, k]).interpolate(method='linear', limit_direction='both').values
+                # set the unobserved data to nan, ~gtmask is the unobserved data
+                training_data[b, ~gt_mask[b, k, :].astype(bool), k] = np.nan
+                training_data[b, :, k] = pd.Series(training_data[b, :, k]).interpolate(method='linear', limit_direction='both').values
 
         # it is possible that after imputation, the training data still contains nan values, this is becuase the data you use to impute contains all nan. Next, we replace the remaining nan values with 0
         training_data[np.isnan(training_data)] = 0
