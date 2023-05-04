@@ -31,7 +31,7 @@ parser.add_argument("--unconditional", action="store_true")
 parser.add_argument("--missing_data_ratio", type=float, default=0.2)
 parser.add_argument("--training_data_ratio", type=float, default=0.8)
 
-parser.add_argument("--epochs", type=int, default=0)
+parser.add_argument("--epochs", type=int, default=-1)
 
 args = parser.parse_args()
 print(args)
@@ -40,7 +40,7 @@ path = "config/" + args.config
 with open(path, "r") as f:
     config = yaml.safe_load(f)
 
-if args.epochs > 0:
+if args.epochs >= 0:
     config["train"]["epochs"] = args.epochs
 
 # config["model"]["is_unconditional"] = args.unconditional
@@ -71,8 +71,8 @@ adjacency_matrix = spatial_correlation
 
 # save adjacency matrix to data/adjaency_matrix.npy
 np.save('data/adj_matrix_soilmoisture.npy', adjacency_matrix)
-# y, y_mean, y_std, X, observation_mask = get_global_soil_moisture_data_subset()
-y, y_mean, y_std, X, observation_mask = get_global_soil_moisture_data()
+y, y_mean, y_std, X, observation_mask = get_global_soil_moisture_data_subset()
+# y, y_mean, y_std, X, observation_mask = get_global_soil_moisture_data()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 train_loader, \
@@ -118,13 +118,14 @@ if args.model in ['CSDI', 'birnn']:
         )
     else:
         model.load_state_dict(torch.load("./save/" + args.modelfolder + "/model.pth"))
-        train(
-            model,
-            config["train"],
-            train_loader,
-            valid_loader=valid_loader,
-            foldername=foldername,
-        )
+        if config['train']['epochs'] > 0:
+            train(
+                model,
+                config["train"],
+                train_loader,
+                valid_loader=valid_loader,
+                foldername=foldername,
+            )
 # evaluate the model
 evaluate(
     model,
