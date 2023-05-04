@@ -15,7 +15,7 @@ from simple_imputer import MeanImputer, LinearInterpolationImputer
 from utils import train, evaluate
 
 parser = argparse.ArgumentParser(description="CSDI")
-parser.add_argument("--model", type=str, default='mean')
+parser.add_argument("--model", type=str, default='CSDI')
 parser.add_argument("--config", type=str, default="base_synthetic.yaml")
 parser.add_argument('--device', default='cuda:0', help='Device for Attack')
 parser.add_argument("--modelfolder", type=str, default="")
@@ -63,7 +63,7 @@ with open(foldername + "config.json", "w") as f:
 n_lat = 6
 n_lon = 6
 n_days = 36
-B = 3000
+B = 2
 latitudes = np.linspace(0, 1, n_lat)
 longitudes = np.linspace(0, 1, n_lon)
 spatial_coords = np.array(np.meshgrid(latitudes, longitudes)).T.reshape(-1, 2)
