@@ -42,12 +42,15 @@ def generate_synthetic_data(n_lat, n_lon, n_days, B, seed=42):
         correlated_noise_matrix = np.dot(spatial_correlation, spatial_correlated_noise)
 
         # Generate autoregressive (AR) error term
-        ar_coeff = 0.7
+        ar_coeff = 1
         ar_error = np.zeros(temp_data.shape)
         for t in range(1, n_days):
-            ar_error[:, t] = ar_coeff * ar_error[:, t - 1] + rng.normal(0, 1, len(spatial_coords))
+            # ar_error[:, t] = ar_coeff * ar_error[:, t - 1] + 1 + 0.2 * rng.normal(0, 1, len(spatial_coords))
+            ar_error[:, t] = ar_coeff * ar_error[:, t - 1] + 1 + 0.5 * rng.normal(0, 1, len(spatial_coords))
 
-        temp_data_with_noise = temp_data + independent_noise + correlated_noise_matrix + ar_error
+
+        # temp_data_with_noise = temp_data + independent_noise + correlated_noise_matrix + ar_error
+        temp_data_with_noise = temp_data + ar_error
 
         # Store the temperature and feature data
         temperature_data[b] = temp_data_with_noise
