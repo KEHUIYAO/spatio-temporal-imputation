@@ -257,7 +257,7 @@ def visualize_index(ind, n_points=1):
         axes[4].scatter(np.arange(L), sp[k, :], color='b')
         axes[5].scatter(np.arange(L), tmin[k, :], color='b')
         axes[5].axhline(y=4 + 273.15, color='k', linestyle='--')  # plot a horizontal line at 4 + 273.15
-        axes[6].scatter(np.arange(L), tmax[k, :], color='')
+        axes[6].scatter(np.arange(L), tmax[k, :], color='b')
         axes[7].scatter(np.arange(L), wind[k, :], color='b')
 
         axes[0].set_ylabel('ground soil moisture')
