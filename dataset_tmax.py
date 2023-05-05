@@ -20,6 +20,7 @@ def generate_tmax_data():
 
     # reshape it to (328 x 14, 1, 100)
     y = y.reshape(328*14, 1, 100)  # B = 328 x 14 = 4592, K=1, L=100
+    y = y.reshape(8*14, 41, 100)  # stablize training
     return y, y_mean, y_std
 
 if __name__ == '__main__':

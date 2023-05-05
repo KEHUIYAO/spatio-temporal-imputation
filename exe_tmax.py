@@ -70,7 +70,7 @@ train_loader, \
 
 
 if args.model == 'CSDI':
-    model = CSDI_Covariates(config, device, target_dim=1, covariate_dim=0).to(device)
+    model = CSDI_Covariates(config, device, target_dim=41, covariate_dim=0).to(device)
 
 elif args.model == 'birnn':
     model = BiRNN(covariate_size=0, config=config, device=device).to(device)
