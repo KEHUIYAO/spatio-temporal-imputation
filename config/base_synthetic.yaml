@@ -2,7 +2,7 @@
 #type: args
 
 train:
-  epochs: 600
+  epochs: 400
   batch_size: 16
   lr: 1.0e-3
 
@@ -20,7 +20,7 @@ diffusion:
     hidden_size: 64
     attention_window: 5
   spatial_layer:
-    type: 'None'
+    type: 'diffconv'
     nheads: 8
     hidden_size: 64
     adj: './data/adj_matrix.npy'
@@ -31,4 +31,4 @@ model:
   timeemb: 32
   featureemb: 16
   target_strategy: "random"
-  missing_pattern: "space_block"
+  missing_pattern: "random"
