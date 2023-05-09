@@ -15,16 +15,16 @@ from simple_imputer import MeanImputer, LinearInterpolationImputer
 from utils import train, evaluate
 
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
-missing_pattern_candidates = ['random', 'block']
+missing_pattern_candidates = ['block']
 # missing_pattern_candidates = ['random', 'block', 'space_block', 'time_block']
-# model_candidates = ['mean', 'interpolation', 'birnn', 'csdi']
-model_candidates = ['mean', 'interpolation']
+model_candidates = ['mean', 'interpolation', 'birnn', 'CSDI']
+# model_candidates = ['mean', 'interpolation']
 time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
 spatial_layer_candidates = [None, 'diffconv']
 
 K = 100
 L = 50
-B = 200
+B = 20
 y, y_mean, y_std, adjacency_matrix = generate_ST_data_with_separable_covariance(K, L, B, seed=42)
 # save adjacency matrix to data/adjaency_matrix.npy
 np.save('data/adj_matrix.npy', adjacency_matrix)
