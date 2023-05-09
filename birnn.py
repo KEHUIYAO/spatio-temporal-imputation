@@ -248,8 +248,8 @@ class BiRNN(nn.Module):
                     k_block_size = np.random.randint(0, K + 1)
 
                 while cur_num_masked < expected_num_masked:
-                    l_start = np.random.randint(0, L - l_block_size + 1)
-                    k_start = np.random.randint(0, K - k_block_size + 1)
+                    l_start = np.random.randint(1, L - l_block_size + 1)
+                    k_start = np.random.randint(1, K - k_block_size + 1)
                     cond_mask[i, k_start:k_start + k_block_size, l_start:l_start + l_block_size] = 0
                     cur_num_masked += l_block_size * k_block_size
 
