@@ -103,12 +103,12 @@ class CSDI_base(nn.Module):
                 if 'time_block_size' in self.config['model']:
                     l_block_size = self.config['model']['time_block_size']
                 else:
-                    l_block_size = np.random.randint(0, L+1)
+                    l_block_size = np.random.randint(1, L+1)
 
                 if 'space_block_size' in self.config['model']:
                     k_block_size = self.config['model']['space_block_size']
                 else:
-                    k_block_size = np.random.randint(0, K+1)
+                    k_block_size = np.random.randint(1, K+1)
 
                 while cur_num_masked < expected_num_masked:
                     l_start = np.random.randint(0, L-l_block_size+1)

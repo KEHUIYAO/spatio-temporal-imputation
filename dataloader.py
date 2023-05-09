@@ -174,8 +174,8 @@ def get_dataloader(y,
         while cur_missing_obs < expected_missing_observations:
             # randomly select a block of data to be missing
             b = rng.randint(0, B)
-            l_block_size = rng.randint(0, L + 1)
-            k_block_size = rng.randint(0, K + 1)
+            l_block_size = rng.randint(1, L + 1)
+            k_block_size = rng.randint(1, K + 1)
             l_start = rng.randint(0, L - l_block_size + 1)
             k_start = rng.randint(0, K - k_block_size + 1)
             gt_mask[b, l_start:l_start + l_block_size, k_start:k_start + k_block_size] = False
