@@ -76,13 +76,15 @@ class diff_CSDI(nn.Module):
         self.spatial_layer_type = config["spatial_layer"]["type"]
 
         if self.time_layer_type == "bilstm":
+            print('use bilstm for temporal modeling')
             self.time_layer = get_bilstm(channels=self.channels,
                                          hidden_size=config["time_layer"]['hidden_size']
                                          )
         else:
             self.time_layer = None
 
-        if self.spatial_layer_type == "spatial_diffusion_conv":
+        if self.spatial_layer_type == "diffconv":
+            print('use diffconv for spatial modeling')
             # read adj matrix from file
             adj = np.load(config['spatial_layer']['adj'])
             # convert to torch tensor
