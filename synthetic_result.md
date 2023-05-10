@@ -6,7 +6,7 @@ $B=3200$, $K=36$, $L=36$.
 
 ## Bayes Error
 
-
+assume we know everything about the data generation process.
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |

@@ -20,9 +20,9 @@ from utils import train, evaluate
 # time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
 # spatial_layer_candidates = ['None', 'diffconv']
 
-missing_data_ratio_candidates = [0.1, 0.5, 0.9]
+missing_data_ratio_candidates = [0.9]
 missing_pattern_candidates = ['random', 'block']
-model_candidates = ['Kriging']
+model_candidates = ['mean']
 
 
 K = 36
@@ -103,7 +103,8 @@ for missing_data_ratio in missing_data_ratio_candidates:
                 model = LinearInterpolationImputer(device=device)
 
             elif model == 'Kriging':
-                model = KrigingImputer(device=device, mu=np.zeros(K*L), covariance_matrix=spatio_temporal_covariance_matrix)
+                # model = KrigingImputer(device=device, mu=np.zeros(K*L), covariance_matrix=spatio_temporal_covariance_matrix)
+                model = KrigingImputer(device=device, mu=np.zeros(K*L))
 
 
             # evaluate the model
