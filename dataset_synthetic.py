@@ -94,3 +94,4 @@ if __name__ == "__main__":
     B = 5
     output, _, _, _ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
     print(output.shape)
+
