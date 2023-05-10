@@ -1,7 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def generate_ST_data_with_separable_covariance(K, L, B, seed=42):
+import numpy as np
+from scipy.stats import multivariate_normal
+
+
+def generate_ST_data_with_separable_covariance(K, L, B, include_covariates=False, seed=42):
     """
     Generate spatio-temporal data with separable covariance function.
     y(s,t) = eta(s, t) + epsilon(s, t), where eta(s,t) are spatial-temporal random effects, and epsilon(s,t) are independent noise.
@@ -11,11 +15,6 @@ def generate_ST_data_with_separable_covariance(K, L, B, seed=42):
     By the property of kronecker product, np.kron(L_temporal, L_spatial) @ np.kron(L_temporal, L_spatial).T = np.kron(L_temporal @ L_temporal.T, L_spatial @ L_spatial.T) = np.kron(C_temporal, C_spatial).
 
 
-    :param K:
-    :param L:
-    :param B:
-    :param seed:
-    :return:
     """
     # define random seed generator
     rng = np.random.RandomState(seed=seed)
@@ -86,12 +85,18 @@ def generate_ST_data_with_separable_covariance(K, L, B, seed=42):
     y_mean = np.mean(y)
     y_std = np.std(y)
     y_standardized = (y - y_mean) / y_std
-    return y_standardized, y_mean, y_std, spatial_cov
+
+    # spatio-temporal covariance matrix of y
+    C_spatio_temporal = (L_spatial_temporal @ L_spatial_temporal.T + np.eye(len(x)*len(t))) / y_std**2
+
+    return y_standardized, y_mean, y_std, spatial_cov, C_spatio_temporal
+
+
 
 if __name__ == "__main__":
     K = 100
     T = 50
     B = 5
-    output, _, _, _ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
+    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
     print(output.shape)
 

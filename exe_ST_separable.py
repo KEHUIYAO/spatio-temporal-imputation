@@ -11,21 +11,25 @@ from dataset_synthetic import generate_ST_data_with_separable_covariance
 from dataloader import get_dataloader
 from main_model import CSDI_Covariates
 from birnn import BiRNN
-from simple_imputer import MeanImputer, LinearInterpolationImputer
+from simple_imputer import MeanImputer, LinearInterpolationImputer, KrigingImputer
 from utils import train, evaluate
 
-missing_data_ratio_candidates = [0.1, 0.5, 0.9]
-missing_pattern_candidates = ['block']
+# missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 # missing_pattern_candidates = ['random', 'block', 'space_block', 'time_block']
-model_candidates = ['mean', 'interpolation', 'birnn', 'CSDI']
-# model_candidates = ['mean', 'interpolation']
-time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
-spatial_layer_candidates = [None, 'diffconv']
+# model_candidates = ['mean', 'interpolation', 'birnn', 'CSDI', 'Kriging']
+# time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
+# spatial_layer_candidates = ['None', 'diffconv']
 
-K = 100
-L = 50
-B = 20
-y, y_mean, y_std, adjacency_matrix = generate_ST_data_with_separable_covariance(K, L, B, seed=42)
+missing_data_ratio_candidates = [0.1, 0.5, 0.9]
+missing_pattern_candidates = ['random', 'block']
+model_candidates = ['Kriging']
+
+
+K = 36
+L = 36
+B = 32
+
+y, y_mean, y_std, adjacency_matrix, spatio_temporal_covariance_matrix = generate_ST_data_with_separable_covariance(K, L, B, seed=42)
 # save adjacency matrix to data/adjaency_matrix.npy
 np.save('data/adj_matrix.npy', adjacency_matrix)
 training_data_ratio = 0.8
@@ -97,6 +101,9 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
             elif model == 'interpolation':
                 model = LinearInterpolationImputer(device=device)
+
+            elif model == 'Kriging':
+                model = KrigingImputer(device=device, mu=np.zeros(K*L), covariance_matrix=spatio_temporal_covariance_matrix)
 
 
             # evaluate the model
