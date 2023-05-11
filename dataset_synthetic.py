@@ -5,14 +5,25 @@ import numpy as np
 from scipy.stats import multivariate_normal
 
 
-def generate_ST_data_with_separable_covariance(K, L, B, include_covariates=False, seed=42):
+def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, non_linear_additive=None, seed=42):
     """
-    Generate spatio-temporal data with separable covariance function.
-    y(s,t) = eta(s, t) + epsilon(s, t), where eta(s,t) are spatial-temporal random effects, and epsilon(s,t) are independent noise.
+    Generate spatio-temporal data with y(s,t) = f(s,t) + eta(s, t) + epsilon(s, t),
+    where f(s,t) = linear_additive + non_linear_additive,
+    eta(s,t) are spatial-temporal random effects with spatio-temporal separable covariance function,
+    epsilon(s,t) are independent noise.
 
-    We use Cholesky decomposition to generate eta. Note that the covariance function is separable, so C = np.kron(C_temporal, C_spatial), and by Cholesky decomposition, C_temporal = L_temporal @ L_temporal.T, C_spatial = L_spatial @ L_spatial.T.
+    If f(s, t) are pure linear additive effects, say, f(s,t)=X(s,t)*beta(s,t). We can generate X(s, t) by incorporating some spatial basis functions and temporal basis functions in the model and randomly draw coefficents beta(s,t) from a multivariate normal distribution.
 
-    By the property of kronecker product, np.kron(L_temporal, L_spatial) @ np.kron(L_temporal, L_spatial).T = np.kron(L_temporal @ L_temporal.T, L_spatial @ L_spatial.T) = np.kron(C_temporal, C_spatial).
+    The basis function we include are:
+    1. overall mean: X0(s, t)=1
+    2. linear in space: X1(si, t)=si for all t
+    3. linear in time: X2(s, tj)=tj for all s
+    Optional:
+    4. linear in space and time interaction: X3(si, tj)=si*tj
+
+    If f(s, t) contains both linear additive effects or non-linear additive effects, say, f(s,t)=X(s,t)*beta(s,t) + g(s,t), where g(s,t) is a non-linear function. We can generate X(s, t) by incorporating some spatial basis functions and temporal basis functions in the model and randomly draw coefficents beta(s,t) from a multivariate normal distribution. We can generate g(s,t) ... (to be continued)
+
+    To efficiently generate eta(s, t), we use Cholesky decomposition on the spatio-temporal covariance matrix. Note that the covariance function is separable, where C = np.kron(C_temporal, C_spatial), and by Cholesky decomposition, C_temporal = L_temporal @ L_temporal.T, C_spatial = L_spatial @ L_spatial.T and by the property of kronecker product, np.kron(L_temporal, L_spatial) @ np.kron(L_temporal, L_spatial).T = np.kron(L_temporal @ L_temporal.T, L_spatial @ L_spatial.T) = np.kron(C_temporal, C_spatial). Finally, we only need to generate independent standard normal random variables and multiply it with np.kron(L_temporal, L_spatial) to get eta(s, t).
 
 
     """
@@ -22,8 +33,35 @@ def generate_ST_data_with_separable_covariance(K, L, B, include_covariates=False
     # Define the spatio-temporal domain
     x = np.linspace(0, 1, K)
     t = np.linspace(0, 1, L)
+    ############################### Generate f(s,t) ##########################################
+    if linear_additive is not None:
+        # overall mean
+        X0 = np.ones([B, K, L])
+        # linear in time
+        X1 = np.zeros([B, K, L])
+        for i in range(L):
+            X1[:, :, i] = t[i] * 20
+        # linear in space
+        X2 = np.zeros([B, K, L])
+        for i in range(K):
+            X2[:, i, :] = x[i] * 10
 
-    # Choose covariance functions and parameters
+        # basis functions (B, K, L, 3)
+        X = np.stack([X0, X1, X2], axis=3)
+
+        # Generate random coefficients
+        beta = rng.normal(0, 1, size=3)  # 3
+
+        # Generate f(s,t) = X(s,t)*beta(s,t)
+        f = np.einsum('bklj, j->bkl', X, beta)  # (B, K, L)
+    elif non_linear_additive is not None:
+        f = np.zeros([B, K, L])
+    else:
+        f = np.zeros([B, K, L])
+
+
+
+    ############################### Generate eta(s,t) ##########################################
     # Choose covariance functions and parameters
     def gaussian_covariance(x1, x2, length_scale):
         return np.exp(-0.5 * (x1 - x2) ** 2 / length_scale ** 2)
@@ -47,7 +85,6 @@ def generate_ST_data_with_separable_covariance(K, L, B, include_covariates=False
         length_scale=length_scale_time
     )
 
-
     # avoid singular matrix
     spatial_cov += jitter * np.eye(len(x))
     temporal_cov += jitter * np.eye(len(t))
@@ -57,25 +94,23 @@ def generate_ST_data_with_separable_covariance(K, L, B, include_covariates=False
     L_temporal = np.linalg.cholesky(temporal_cov)
 
     # Generate independent standard normal random variables
-    eta = rng.normal(0, 1, size=(len(x)*len(t),B))
+    eta = rng.normal(0, 1, size=(B, len(x) * len(t)))  # (B, K*L)
 
     # the Cholesky decomposition of the separable covariance function is
-    L_spatial_temporal = np.kron(L_temporal, L_spatial)
+    L_spatial_temporal = np.kron(L_spatial, L_temporal)  # (K*L, K*L)
 
     # Generate correlated random variables by multiplying L and eta
-    eta = L_spatial_temporal @ eta
+    eta = np.einsum('bj,jj->bj', eta, L_spatial_temporal)  # (B, K*L)
 
     # reshape eta to 2D
-    eta = eta.reshape(len(t), len(x), B)
+    eta = eta.reshape(B, K, L)  # (B, K, L)
 
+    ############################### Generate epsilon(s,t) ##########################################
     # Generate independent standard normal random variables
-    epsilon = rng.normal(0, 1, size=(len(t), len(x), B))
+    epsilon = rng.normal(0, 1, size=(B, K, L))  # (B, K, L)
 
-    # y = eta + epsilon
-    y = eta + epsilon
-
-    # reshape to B, K, L
-    y = y.transpose(2, 1, 0)
+    ############################### Generate y(s,t) ##########################################
+    y = f + eta + epsilon
 
     # Plot the generated data
     plt.imshow(y[0, :, :], cmap='jet')
@@ -89,7 +124,29 @@ def generate_ST_data_with_separable_covariance(K, L, B, include_covariates=False
     # spatio-temporal covariance matrix of y
     C_spatio_temporal = (L_spatial_temporal @ L_spatial_temporal.T + np.eye(len(x)*len(t))) / y_std**2
 
-    return y_standardized, y_mean, y_std, spatial_cov, C_spatio_temporal
+
+    # covariates time
+    X_time = np.zeros([B, K, L])
+    for i in range(L):
+        X_time[:, :, i] = t[i] * 20
+
+    # covariates space
+    X_space = np.zeros([B, K, L])
+    for i in range(K):
+        X_space[:, i, :] = x[i] * 10
+
+    X = np.stack([X_time, X_space], axis=3)  # (B, K, L, 2)
+
+
+    return y_standardized, y_mean, y_std, spatial_cov, C_spatio_temporal, X
+
+
+
+
+
+
+
+
 
 
 
@@ -97,6 +154,6 @@ if __name__ == "__main__":
     K = 100
     T = 50
     B = 5
-    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
+    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True)
     print(output.shape)
 

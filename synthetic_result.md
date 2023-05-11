@@ -19,6 +19,10 @@ assume we know everything about the data generation process.
 
 
 
+## Spatio-Temporal Kriging
+
+Horribly slow
+
 
 
 
