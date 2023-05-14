@@ -22,6 +22,13 @@ class GraphConvolution(Module):
         else:
             self.register_parameter('bias', None)
 
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1. / math.sqrt(self.linear.weight.size(1))
+        if self.bias is not None:
+            self.bias.data.uniform_(-stdv, stdv)
+
     def forward(self, input, adj):
         """
 

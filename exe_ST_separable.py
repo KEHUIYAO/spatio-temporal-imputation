@@ -10,6 +10,7 @@ from dataset_synthetic import generate_ST_data_with_separable_covariance
 from dataloader import get_dataloader
 from main_model import CSDI_Covariates
 from birnn import BiRNN
+from bigcrnn import BiGCRNN
 from simple_imputer import MeanImputer, LinearInterpolationImputer, KrigingImputer
 from utils import train, evaluate
 
@@ -21,7 +22,7 @@ from utils import train, evaluate
 
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 missing_pattern_candidates = ['random', 'block']
-model_candidates = ['mean', 'interpolation', 'birnn', 'CSDI', 'Kriging']
+model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
 
 
 K = 36
@@ -32,7 +33,7 @@ y, y_mean, y_std, adjacency_matrix, spatio_temporal_covariance_matrix, *_ = gene
 # save adjacency matrix to data/adjaency_matrix.npy
 np.save('data/adj_matrix.npy', adjacency_matrix)
 training_data_ratio = 0.8
-batch_size = 1
+batch_size = 16
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 nsample = 10
 
@@ -87,6 +88,16 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
             elif model == 'birnn':
                 model = BiRNN(covariate_size=0, config=config, device=device).to(device)
+                train(
+                    model,
+                    config["train"],
+                    train_loader,
+                    valid_loader=valid_loader,
+                    foldername=foldername,
+                )
+
+            elif model == 'bigcrnn':
+                model = BiGCRNN(target_size=K, covariate_size=0, config=config, device=device, adj=adjacency_matrix-np.eye(K), hidden_size=64, num_layers=1, dropout=0.0).to(device)
                 train(
                     model,
                     config["train"],
