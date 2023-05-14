@@ -66,8 +66,12 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     def gaussian_covariance(x1, x2, length_scale):
         return np.exp(-0.5 * (x1 - x2) ** 2 / length_scale ** 2)
 
-    length_scale_space = 0.2
-    length_scale_time = 0.2
+    length_scale_space = 1 / 36
+
+    # length_scale_time = 1 / 36
+    # length_scale_time = 10  # strong temporal correlation
+    length_scale_time = 1e-4  # weak temporal correlation
+
     jitter = 1e-6
 
     # Generate the covariance matrix for spatial domain
@@ -95,14 +99,13 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
 
     # Generate independent standard normal random variables
     eta = rng.normal(0, 1, size=(B, len(x) * len(t)))  # (B, K*L)
-
     # the Cholesky decomposition of the separable covariance function is
     L_spatial_temporal = np.kron(L_spatial, L_temporal)  # (K*L, K*L)
 
     # Generate correlated random variables by multiplying L and eta
-    eta = np.einsum('bj,jj->bj', eta, L_spatial_temporal)  # (B, K*L)
+    eta = np.einsum('ij, bj->bi', L_spatial_temporal, eta)  # (B, K*L)
 
-    # reshape eta to 2D
+    # reshape eta
     eta = eta.reshape(B, K, L)  # (B, K, L)
 
     ############################### Generate epsilon(s,t) ##########################################
@@ -110,6 +113,7 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     epsilon = rng.normal(0, 1, size=(B, K, L))  # (B, K, L)
 
     ############################### Generate y(s,t) ##########################################
+    # y = f + eta + epsilon
     y = f + eta + epsilon
 
     # Plot the generated data
@@ -141,19 +145,11 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     return y_standardized, y_mean, y_std, spatial_cov, C_spatio_temporal, X
 
 
-
-
-
-
-
-
-
-
-
 if __name__ == "__main__":
-    K = 100
-    T = 50
-    B = 5
-    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True)
+    K = 36
+    T = 36
+    B = 1
+    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
+    # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True)
     print(output.shape)
 
