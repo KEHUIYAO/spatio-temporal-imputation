@@ -1,8 +1,84 @@
-# Main Result
+# Spatio-Temporal Model
 
-Model: $Y(s,t) = \eta(s, t)+\epsilon(s,t)$, where $\eta(s,t)$ follows a separable spatio-temporal covariance matrix; $\epsilon(t,s)$ is i.i.d Gaussian random noise.
+Model: $Y(s,t) = f(s,t) + \eta(s, t)+\epsilon(s,t)$, where $f(s,t)$ is space-time fixed effect, $\eta(s,t)$ is space-time random effect, $\epsilon(t,s)$ is i.i.d Gaussian random noise.
 
-$B=3200$, $K=36$, $L=36$.
+## $f(s,t)$
+
+### Linear
+
+
+
+### Non-linear
+
+
+
+## $\eta(s,t)$
+
+First, we assume $\eta(s,t)$ follow a separable spatio-temporal covariance matrix, where
+
+$C{(s_1,t_1),(s_2,t_2)}=C_s(s_1,s_2)\times C_t(t_1,t_2)$,
+
+$C_s(s_1, s_2) = \exp[-0.5\times \{d(s_1,s_2) / \sigma_s\}^2]$,
+
+$C_t(t_1, t_2) = \exp[-0.5\times \{(t_1-t_2) / \sigma_t\}^2]$.
+
+
+
+# Missing Patterns
+
+## Randomly missing
+
+
+
+## Block missing
+
+
+
+
+
+
+
+
+
+# Methods
+
+## Mean imputer
+
+
+
+## Interpolation
+
+
+
+## Spatio-Temporal Kriging
+
+
+
+## Bidirectional RNN 
+
+
+
+## Bidirectional RNN + GCN
+
+
+
+## Diffusion-based Bidirectional RNN + GCN
+
+
+
+
+
+
+
+# Simulation
+
+## Setting 1: weak temporal and strong spatial correlation
+
+Let $s$ be $K$ evenly spaced points between 0 and 1, $t$ be $L$ evenly spaced points between 0 and 1.
+
+Set $\sigma_s=1/K$, $\sigma_t=1e^{-4}$. 
+
+$B=3200$, $K=36$, $L=36$. 
 
 ## Bayes Error
 
