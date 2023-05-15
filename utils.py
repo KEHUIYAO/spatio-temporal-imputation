@@ -268,3 +268,5 @@ def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldernam
                 f.write("RMSE: " + str(np.sqrt(mse_total / evalpoints_total)) + "\n")
                 f.write("MAE: " + str(mae_total / evalpoints_total) + "\n")
                 f.write("CRPS: " + str(CRPS) + "\n")
+
+            return {'RMSE': np.sqrt(mse_total / evalpoints_total), 'MAE': mae_total / evalpoints_total, 'CRPS': CRPS}
