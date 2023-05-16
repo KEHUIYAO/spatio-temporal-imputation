@@ -20,7 +20,7 @@ diffusion:
     hidden_size: 64
     attention_window: 5
   spatial_layer:
-    type: 'diffconv'
+    type: 'None'
     nheads: 8
     hidden_size: 64
     adj: './data/adj_matrix.npy'

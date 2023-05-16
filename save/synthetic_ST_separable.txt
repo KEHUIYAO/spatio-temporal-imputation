@@ -1,0 +1,468 @@
+------------------
+missing_data_ratio: 0.1
+missing_pattern: random
+model: <simple_imputer.MeanImputer object at 0x7f2b1187a610>
+rmse: 1.4133555207044324
+mae: 1.1278028211079774
+crps: 1.0002870057758533
+------------------
+missing_data_ratio: 0.1
+missing_pattern: random
+model: <simple_imputer.LinearInterpolationImputer object at 0x7f2b0dec2fd0>
+rmse: 1.7554081233039085
+mae: 1.3994398000286732
+crps: 1.2412112386603105
+------------------
+missing_data_ratio: 0.1
+missing_pattern: random
+model: BiRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(128, 1, kernel_size=(1,), stride=(1,))
+)
+rmse: 1.413087155929174
+mae: 1.1274781507017626
+crps: 0.9999989961322985
+------------------
+missing_data_ratio: 0.1
+missing_pattern: random
+model: BiGCRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+  (gcn): GCN(
+    (gc1): GraphConvolution(
+      (linear): Linear(in_features=128, out_features=64, bias=False)
+    )
+    (gc2): GraphConvolution(
+      (linear): Linear(in_features=64, out_features=64, bias=False)
+    )
+  )
+)
+rmse: 1.315434275844303
+mae: 1.0494872609209949
+crps: 0.9308262875205592
+------------------
+missing_data_ratio: 0.1
+missing_pattern: random
+model: CSDI_Covariates(
+  (embed_layer): Embedding(36, 16)
+  (diffmodel): diff_CSDI(
+    (diffusion_embedding): DiffusionEmbedding(
+      (projection1): Linear(in_features=128, out_features=128, bias=True)
+      (projection2): Linear(in_features=128, out_features=128, bias=True)
+    )
+    (input_projection): Conv1d(3, 64, kernel_size=(1,), stride=(1,))
+    (diffusion_projection): Linear(in_features=128, out_features=64, bias=True)
+    (output_projection): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+    (time_layer): BiLSTM(
+      (lstm): LSTM(64, 64, bidirectional=True)
+      (mlp): Conv1d(128, 64, kernel_size=(1,), stride=(1,))
+    )
+    (feature_layer): SpatialDiffusionConv(
+      (mlp): ModuleList(
+        (0): Conv1d(192, 64, kernel_size=(1,), stride=(1,))
+        (1): ReLU()
+        (2): Conv1d(64, 64, kernel_size=(1,), stride=(1,))
+      )
+    )
+  )
+)
+rmse: 1.4041319984139922
+mae: 1.120816963915279
+crps: 0.7487124894794664
+------------------
+missing_data_ratio: 0.1
+missing_pattern: random
+model: <simple_imputer.KrigingImputer object at 0x7f2b2598db90>
+rmse: 1.3065696175805253
+mae: 1.0425353557123176
+crps: 0.9246603313245272
+------------------
+missing_data_ratio: 0.1
+missing_pattern: block
+model: <simple_imputer.MeanImputer object at 0x7f2b0de6d710>
+rmse: 1.4161437818496179
+mae: 1.130053076641707
+crps: 1.0018709082352488
+------------------
+missing_data_ratio: 0.1
+missing_pattern: block
+model: <simple_imputer.LinearInterpolationImputer object at 0x7f2b0dec2ad0>
+rmse: 1.8400095414823476
+mae: 1.463310833628141
+crps: 1.2973272423995168
+------------------
+missing_data_ratio: 0.1
+missing_pattern: block
+model: BiRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(128, 1, kernel_size=(1,), stride=(1,))
+)
+rmse: 1.4135349740127034
+mae: 1.1279461932469146
+crps: 1.0000030116031045
+------------------
+missing_data_ratio: 0.1
+missing_pattern: block
+model: BiGCRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+  (gcn): GCN(
+    (gc1): GraphConvolution(
+      (linear): Linear(in_features=128, out_features=64, bias=False)
+    )
+    (gc2): GraphConvolution(
+      (linear): Linear(in_features=64, out_features=64, bias=False)
+    )
+  )
+)
+rmse: 1.407970811587292
+mae: 1.123537295672153
+crps: 0.9960943523206209
+------------------
+missing_data_ratio: 0.1
+missing_pattern: block
+model: CSDI_Covariates(
+  (embed_layer): Embedding(36, 16)
+  (diffmodel): diff_CSDI(
+    (diffusion_embedding): DiffusionEmbedding(
+      (projection1): Linear(in_features=128, out_features=128, bias=True)
+      (projection2): Linear(in_features=128, out_features=128, bias=True)
+    )
+    (input_projection): Conv1d(3, 64, kernel_size=(1,), stride=(1,))
+    (diffusion_projection): Linear(in_features=128, out_features=64, bias=True)
+    (output_projection): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+    (time_layer): BiLSTM(
+      (lstm): LSTM(64, 64, bidirectional=True)
+      (mlp): Conv1d(128, 64, kernel_size=(1,), stride=(1,))
+    )
+    (feature_layer): SpatialDiffusionConv(
+      (mlp): ModuleList(
+        (0): Conv1d(192, 64, kernel_size=(1,), stride=(1,))
+        (1): ReLU()
+        (2): Conv1d(64, 64, kernel_size=(1,), stride=(1,))
+      )
+    )
+  )
+)
+rmse: 1.5080497448536698
+mae: 1.203668886486601
+crps: 0.8042204003585013
+------------------
+missing_data_ratio: 0.1
+missing_pattern: block
+model: <simple_imputer.KrigingImputer object at 0x7f2b18ae5b10>
+rmse: 1.4075341798624776
+mae: 1.1231448499021262
+crps: 0.9957463113885177
+------------------
+missing_data_ratio: 0.5
+missing_pattern: random
+model: <simple_imputer.MeanImputer object at 0x7f2b0de926d0>
+rmse: 1.4153413204384355
+mae: 1.1293571712458617
+crps: 1.0005966989617598
+------------------
+missing_data_ratio: 0.5
+missing_pattern: random
+model: <simple_imputer.LinearInterpolationImputer object at 0x7f2b11882e90>
+rmse: 1.7960719157625697
+mae: 1.4313000688602784
+crps: 1.2681142907393606
+------------------
+missing_data_ratio: 0.5
+missing_pattern: random
+model: BiRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(128, 1, kernel_size=(1,), stride=(1,))
+)
+rmse: 1.4145390781742035
+mae: 1.1286840617054323
+crps: 1.0000003011603105
+------------------
+missing_data_ratio: 0.5
+missing_pattern: random
+model: BiGCRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+  (gcn): GCN(
+    (gc1): GraphConvolution(
+      (linear): Linear(in_features=128, out_features=64, bias=False)
+    )
+    (gc2): GraphConvolution(
+      (linear): Linear(in_features=64, out_features=64, bias=False)
+    )
+  )
+)
+rmse: 1.3595878904122882
+mae: 1.0841525116144894
+crps: 0.9605457908228824
+------------------
+missing_data_ratio: 0.5
+missing_pattern: random
+model: CSDI_Covariates(
+  (embed_layer): Embedding(36, 16)
+  (diffmodel): diff_CSDI(
+    (diffusion_embedding): DiffusionEmbedding(
+      (projection1): Linear(in_features=128, out_features=128, bias=True)
+      (projection2): Linear(in_features=128, out_features=128, bias=True)
+    )
+    (input_projection): Conv1d(3, 64, kernel_size=(1,), stride=(1,))
+    (diffusion_projection): Linear(in_features=128, out_features=64, bias=True)
+    (output_projection): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+    (time_layer): BiLSTM(
+      (lstm): LSTM(64, 64, bidirectional=True)
+      (mlp): Conv1d(128, 64, kernel_size=(1,), stride=(1,))
+    )
+    (feature_layer): SpatialDiffusionConv(
+      (mlp): ModuleList(
+        (0): Conv1d(192, 64, kernel_size=(1,), stride=(1,))
+        (1): ReLU()
+        (2): Conv1d(64, 64, kernel_size=(1,), stride=(1,))
+      )
+    )
+  )
+)
+rmse: 1.45150836295991
+mae: 1.1572460029694296
+crps: 0.773221166510331
+------------------
+missing_data_ratio: 0.5
+missing_pattern: random
+model: <simple_imputer.KrigingImputer object at 0x7f2b12e29ad0>
+rmse: 1.3534537260026094
+mae: 1.0791771323108368
+crps: 0.9561378077456826
+------------------
+missing_data_ratio: 0.5
+missing_pattern: block
+model: <simple_imputer.MeanImputer object at 0x7f2b18ae5bd0>
+rmse: 1.4181740806606185
+mae: 1.1314877114449364
+crps: 1.0026817321777344
+------------------
+missing_data_ratio: 0.5
+missing_pattern: block
+model: <simple_imputer.LinearInterpolationImputer object at 0x7f2b11882510>
+rmse: 1.8395289399858896
+mae: 1.462356752218485
+crps: 1.295885587993421
+------------------
+missing_data_ratio: 0.5
+missing_pattern: block
+model: BiRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(128, 1, kernel_size=(1,), stride=(1,))
+)
+rmse: 1.4143021945791268
+mae: 1.1284612172195658
+crps: 0.9999998996132299
+------------------
+missing_data_ratio: 0.5
+missing_pattern: block
+model: BiGCRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+  (gcn): GCN(
+    (gc1): GraphConvolution(
+      (linear): Linear(in_features=128, out_features=64, bias=False)
+    )
+    (gc2): GraphConvolution(
+      (linear): Linear(in_features=64, out_features=64, bias=False)
+    )
+  )
+)
+rmse: 1.4096116809658652
+mae: 1.1246140688400057
+crps: 0.9965906645122328
+------------------
+missing_data_ratio: 0.5
+missing_pattern: block
+model: CSDI_Covariates(
+  (embed_layer): Embedding(36, 16)
+  (diffmodel): diff_CSDI(
+    (diffusion_embedding): DiffusionEmbedding(
+      (projection1): Linear(in_features=128, out_features=128, bias=True)
+      (projection2): Linear(in_features=128, out_features=128, bias=True)
+    )
+    (input_projection): Conv1d(3, 64, kernel_size=(1,), stride=(1,))
+    (diffusion_projection): Linear(in_features=128, out_features=64, bias=True)
+    (output_projection): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+    (time_layer): BiLSTM(
+      (lstm): LSTM(64, 64, bidirectional=True)
+      (mlp): Conv1d(128, 64, kernel_size=(1,), stride=(1,))
+    )
+    (feature_layer): SpatialDiffusionConv(
+      (mlp): ModuleList(
+        (0): Conv1d(192, 64, kernel_size=(1,), stride=(1,))
+        (1): ReLU()
+        (2): Conv1d(64, 64, kernel_size=(1,), stride=(1,))
+      )
+    )
+  )
+)
+rmse: 1.5093267216394237
+mae: 1.204065027985055
+crps: 0.8047292608963815
+------------------
+missing_data_ratio: 0.5
+missing_pattern: block
+model: <simple_imputer.KrigingImputer object at 0x7f2b18d5dd90>
+rmse: 1.4091520945771945
+mae: 1.124250110394289
+crps: 0.9962682222065172
+------------------
+missing_data_ratio: 0.9
+missing_pattern: random
+model: <simple_imputer.MeanImputer object at 0x7f2b18af8d10>
+rmse: 1.4191834418619467
+mae: 1.1324237946913096
+crps: 1.003449891742907
+------------------
+missing_data_ratio: 0.9
+missing_pattern: random
+model: <simple_imputer.LinearInterpolationImputer object at 0x7f2b18daef50>
+rmse: 1.897625234177178
+mae: 1.5100081028492551
+crps: 1.3380304637708162
+------------------
+missing_data_ratio: 0.9
+missing_pattern: random
+model: BiRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(128, 1, kernel_size=(1,), stride=(1,))
+)
+rmse: 1.4142986755674027
+mae: 1.1285312388311914
+crps: 1.000000702707391
+------------------
+missing_data_ratio: 0.9
+missing_pattern: random
+model: BiGCRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+  (gcn): GCN(
+    (gc1): GraphConvolution(
+      (linear): Linear(in_features=128, out_features=64, bias=False)
+    )
+    (gc2): GraphConvolution(
+      (linear): Linear(in_features=64, out_features=64, bias=False)
+    )
+  )
+)
+rmse: 1.403002027725368
+mae: 1.1192815480079266
+crps: 0.9918044240851152
+------------------
+missing_data_ratio: 0.9
+missing_pattern: random
+model: CSDI_Covariates(
+  (embed_layer): Embedding(36, 16)
+  (diffmodel): diff_CSDI(
+    (diffusion_embedding): DiffusionEmbedding(
+      (projection1): Linear(in_features=128, out_features=128, bias=True)
+      (projection2): Linear(in_features=128, out_features=128, bias=True)
+    )
+    (input_projection): Conv1d(3, 64, kernel_size=(1,), stride=(1,))
+    (diffusion_projection): Linear(in_features=128, out_features=64, bias=True)
+    (output_projection): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+    (time_layer): BiLSTM(
+      (lstm): LSTM(64, 64, bidirectional=True)
+      (mlp): Conv1d(128, 64, kernel_size=(1,), stride=(1,))
+    )
+    (feature_layer): SpatialDiffusionConv(
+      (mlp): ModuleList(
+        (0): Conv1d(192, 64, kernel_size=(1,), stride=(1,))
+        (1): ReLU()
+        (2): Conv1d(64, 64, kernel_size=(1,), stride=(1,))
+      )
+    )
+  )
+)
+rmse: 1.5018864073657938
+mae: 1.1981489687112272
+crps: 0.8008373160111276
+------------------
+missing_data_ratio: 0.9
+missing_pattern: random
+model: <simple_imputer.KrigingImputer object at 0x7f2b120f1450>
+rmse: 1.4019720635180437
+mae: 1.1184279640645005
+crps: 0.9910481101588199
+------------------
+missing_data_ratio: 0.9
+missing_pattern: block
+model: <simple_imputer.MeanImputer object at 0x7f2b1187a390>
+rmse: 1.4202572910646483
+mae: 1.1330240893747177
+crps: 1.004370839972245
+------------------
+missing_data_ratio: 0.9
+missing_pattern: block
+model: <simple_imputer.LinearInterpolationImputer object at 0x7f2b18af8e10>
+rmse: 1.8369751488771116
+mae: 1.4590919859519218
+crps: 1.293414266485917
+------------------
+missing_data_ratio: 0.9
+missing_pattern: block
+model: BiRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(128, 1, kernel_size=(1,), stride=(1,))
+)
+rmse: 1.4138560821255157
+mae: 1.1280937639234845
+crps: 1.0000004015470807
+------------------
+missing_data_ratio: 0.9
+missing_pattern: block
+model: BiGCRNN(
+  (rnn): LSTM(2, 64, bidirectional=True)
+  (out): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+  (gcn): GCN(
+    (gc1): GraphConvolution(
+      (linear): Linear(in_features=128, out_features=64, bias=False)
+    )
+    (gc2): GraphConvolution(
+      (linear): Linear(in_features=64, out_features=64, bias=False)
+    )
+  )
+)
+rmse: 1.4099318937239076
+mae: 1.1248497095008827
+crps: 0.9971248225161904
+------------------
+missing_data_ratio: 0.9
+missing_pattern: block
+model: CSDI_Covariates(
+  (embed_layer): Embedding(36, 16)
+  (diffmodel): diff_CSDI(
+    (diffusion_embedding): DiffusionEmbedding(
+      (projection1): Linear(in_features=128, out_features=128, bias=True)
+      (projection2): Linear(in_features=128, out_features=128, bias=True)
+    )
+    (input_projection): Conv1d(3, 64, kernel_size=(1,), stride=(1,))
+    (diffusion_projection): Linear(in_features=128, out_features=64, bias=True)
+    (output_projection): Conv1d(64, 1, kernel_size=(1,), stride=(1,))
+    (time_layer): BiLSTM(
+      (lstm): LSTM(64, 64, bidirectional=True)
+      (mlp): Conv1d(128, 64, kernel_size=(1,), stride=(1,))
+    )
+    (feature_layer): SpatialDiffusionConv(
+      (mlp): ModuleList(
+        (0): Conv1d(192, 64, kernel_size=(1,), stride=(1,))
+        (1): ReLU()
+        (2): Conv1d(64, 64, kernel_size=(1,), stride=(1,))
+      )
+    )
+  )
+)
+rmse: 1.5095224713698414
+mae: 1.2041069675051161
+crps: 0.8051449625115645
+------------------
+missing_data_ratio: 0.9
+missing_pattern: block
+model: <simple_imputer.KrigingImputer object at 0x7f2b18ae5b90>
+rmse: 1.409515887322667
+mae: 1.1245217454787841
+crps: 0.9968339016563014

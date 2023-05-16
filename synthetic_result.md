@@ -14,6 +14,8 @@ Model: $Y(s,t) = f(s,t) + \eta(s, t)+\epsilon(s,t)$, where $f(s,t)$ is space-tim
 
 ## $\eta(s,t)$
 
+### A separable spatio-temporal covariance function
+
 First, we assume $\eta(s,t)$ follow a separable spatio-temporal covariance matrix, where
 
 $C{(s_1,t_1),(s_2,t_2)}=C_s(s_1,s_2)\times C_t(t_1,t_2)$,
@@ -21,6 +23,18 @@ $C{(s_1,t_1),(s_2,t_2)}=C_s(s_1,s_2)\times C_t(t_1,t_2)$,
 $C_s(s_1, s_2) = \exp[-0.5\times \{d(s_1,s_2) / \sigma_s\}^2]$,
 
 $C_t(t_1, t_2) = \exp[-0.5\times \{(t_1-t_2) / \sigma_t\}^2]$.
+
+### Random effects with spatial basis functions
+
+$\eta(s,t)=\sum_{i=1}^{n_{\alpha}}\phi_i(s)\alpha_i(t)$, where
+
+$\phi_i(s)$ are known basis functions, and $\alpha_i(t)$ can be a temporal random process.
+
+### Random effects with temporal basis functions
+
+$\eta(s,t)=\sum_{i=1}^{n_{\alpha}}\phi_i(s)\alpha_i(s)$.
+
+
 
 
 
@@ -182,3 +196,4 @@ missing rate=0.9, missing pattern=random
 missing rate=0.9, missing pattern=block
 
 <img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.9_block_CSDI.png" alt="synthetic_ST_separable_0.9_block_CSDI" style="zoom:72%;" />
+

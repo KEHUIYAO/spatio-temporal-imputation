@@ -20,10 +20,10 @@ from utils import train, evaluate
 # time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
 # spatial_layer_candidates = ['None', 'diffconv']
 
+file = open('./save/synthetic_ST_separable.txt', 'w')
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 missing_pattern_candidates = ['random', 'block']
-model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
-
+model_candidates = ['CSDI']
 
 K = 36
 L = 36
@@ -118,7 +118,7 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
 
             # evaluate the model
-            evaluate(
+            res = evaluate(
                 model,
                 test_loader,
                 nsample=nsample,
@@ -126,3 +126,14 @@ for missing_data_ratio in missing_data_ratio_candidates:
                 mean_scaler=mean_scaler,
                 foldername=foldername
             )
+
+            file.write('------------------\n')
+            file.write('missing_data_ratio: ' + str(missing_data_ratio) + '\n')
+            file.write('missing_pattern: ' + str(missing_pattern) + '\n')
+            file.write('model: ' + str(model) + '\n')
+            file.write('rmse: ' + str(res['RMSE']) + '\n')
+            file.write('mae: ' + str(res['MAE']) + '\n')
+            file.write('crps: ' + str(res['CRPS']) + '\n')
+
+file.close()
+
