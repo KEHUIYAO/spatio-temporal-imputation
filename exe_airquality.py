@@ -43,7 +43,7 @@ with open(path, "r") as f:
 print(json.dumps(config, indent=4))
 
 foldername = (
-    "./save/airquality" + "_" + str(args.model) + "_" + "/"
+    "./save/airquality" + "_" + str(args.model) + "/"
 )
 
 print('model folder:', foldername)
