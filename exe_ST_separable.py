@@ -23,7 +23,7 @@ from utils import train, evaluate
 file = open('./save/synthetic_ST_separable.txt', 'w')
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 missing_pattern_candidates = ['random', 'block']
-model_candidates = ['CSDI']
+model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
 
 K = 36
 L = 36
