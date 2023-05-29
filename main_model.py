@@ -134,7 +134,7 @@ class CSDI_base(nn.Module):
             if self.target_strategy == "mix" and mask_choice > 0.5:
                 cond_mask[i] = rand_mask[i]
             else:  # draw another sample for histmask (i-1 corresponds to another sample)
-                cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1] 
+                cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1]
         return cond_mask
 
     def get_side_info(self, observed_tp, cond_mask):
@@ -287,8 +287,58 @@ class CSDI_base(nn.Module):
         return samples, observed_data, target_mask, observed_mask, observed_tp
 
 
+class CSDI_PM25(CSDI_base):
+    def __init__(self, config, device, target_dim=36):
+        super(CSDI_PM25, self).__init__(target_dim, config, device)
+
+    def process_data(self, batch):
+        observed_data = batch["observed_data"].to(self.device).float()  # (B,K,L)
+        observed_mask = batch["observed_mask"].to(self.device).float() # (B,K,L)
+        observed_tp = batch["timepoints"].to(self.device).float()
+        gt_mask = batch["gt_mask"].to(self.device).float()
+        cut_length = batch["cut_length"].to(self.device).long()
+        for_pattern_mask = batch["hist_mask"].to(self.device).float()
+
+        observed_data = observed_data.permute(0, 2, 1)
+        observed_mask = observed_mask.permute(0, 2, 1)
+        gt_mask = gt_mask.permute(0, 2, 1)
+        for_pattern_mask = for_pattern_mask.permute(0, 2, 1)
+
+        return (
+            observed_data,
+            observed_mask,
+            observed_tp,
+            gt_mask,
+            for_pattern_mask,
+            cut_length,
+        )
 
 
+class CSDI_Physio(CSDI_base):
+    def __init__(self, config, device, target_dim=35):
+        super(CSDI_Physio, self).__init__(target_dim, config, device)
+
+    def process_data(self, batch):
+        observed_data = batch["observed_data"].to(self.device).float()
+        observed_mask = batch["observed_mask"].to(self.device).float()
+        observed_tp = batch["timepoints"].to(self.device).float()
+        gt_mask = batch["gt_mask"].to(self.device).float()
+
+        observed_data = observed_data.permute(0, 2, 1)
+        observed_mask = observed_mask.permute(0, 2, 1)
+        gt_mask = gt_mask.permute(0, 2, 1)
+
+        cut_length = torch.zeros(len(observed_data)).long().to(self.device)
+        for_pattern_mask = observed_mask
+
+        return (
+            observed_data,
+            observed_mask,
+            observed_tp,
+            gt_mask,
+            for_pattern_mask,
+            cut_length
+        )
 
 class CSDI_Covariates(CSDI_base):
     def __init__(self, config, device, target_dim=36, covariate_dim=0):
@@ -296,7 +346,7 @@ class CSDI_Covariates(CSDI_base):
         config_diff = config["diffusion"]
         config_diff["side_dim"] = self.emb_total_dim + covariate_dim
         input_dim = 1 if self.is_unconditional == True else 2
-        self.diffmodel = diff_CSDI(config_diff, input_dim + covariate_dim + 1)
+        self.diffmodel = diff_CSDI(config_diff, input_dim)
         self.covariate_dim = covariate_dim
 
     def process_data(self, batch):
@@ -327,12 +377,24 @@ class CSDI_Covariates(CSDI_base):
 
     def get_side_info(self, observed_tp, cond_mask, observed_covariates):
         B, K, L = cond_mask.shape
-        if self.is_unconditional == False:
-            side_info = cond_mask.unsqueeze(1)  # (B,1,K,L)
+
+        time_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
+        time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
+        feature_embed = self.embed_layer(
+            torch.arange(self.target_dim).to(self.device)
+        )  # (K,emb)
+        feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
+
+        side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
+        side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
 
         # observed covariates is of shape (B, *, K, L), concat with the side info
         if observed_covariates is not None:
             side_info = torch.cat([side_info, observed_covariates], dim=1)
+
+        if self.is_unconditional == False:
+            side_mask = cond_mask.unsqueeze(1)  # (B,1,K,L)
+            side_info = torch.cat([side_info, side_mask], dim=1)
 
         return side_info
 
@@ -384,5 +446,4 @@ class CSDI_Covariates(CSDI_base):
             for i in range(len(cut_length)):  # to avoid double evaluation
                 target_mask[i, ..., 0: cut_length[i].item()] = 0
         return samples, observed_data, target_mask, observed_mask, observed_tp
-
 
