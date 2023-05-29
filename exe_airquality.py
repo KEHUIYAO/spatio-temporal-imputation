@@ -14,12 +14,12 @@ from simple_imputer import MeanImputer, LinearInterpolationImputer
 from utils import train, evaluate
 
 parser = argparse.ArgumentParser(description="CSDI")
-parser.add_argument("--model", type=str, default='birnn')
+parser.add_argument("--model", type=str, default='CSDI')
 parser.add_argument("--config", type=str, default="base_airquality.yaml")
 parser.add_argument('--device', default='cuda:0', help='Device for Attack')
 parser.add_argument("--modelfolder", type=str, default="")
 parser.add_argument(
-    "--targetstrategy", type=str, default="random", choices=["mix", "random", "historical"]
+    "--targetstrategy", type=str, default="mix", choices=["mix", "random", "historical"]
 )
 parser.add_argument(
     "--validationindex", type=int, default=0, help="index of month used for validation (value:[0-7])"
