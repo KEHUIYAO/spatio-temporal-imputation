@@ -169,31 +169,3 @@ Horribly slow
 
 
 
-# Visualization of CSDI
-
-missing rate = 0.1, missing pattern = random
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.1_random_CSDI.png" alt="synthetic_ST_separable_0.1_random_CSDI" style="zoom: 33%;" />
-
-missing rate = 0.1, missing pattern = block
-
-![synthetic_ST_separable_0.1_block_CSDI](/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.1_block_CSDI.png)
-
-missing rate = 0.5, missing pattern=random
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.5_random_CSDI.png" alt="synthetic_ST_separable_0.5_random_CSDI" style="zoom:72%;" />
-
-missing rate = 0.5, missing pattern=block
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.5_block_CSDI.png" alt="synthetic_ST_separable_0.5_block_CSDI" style="zoom:72%;" />
-
-
-
-missing rate=0.9, missing pattern=random
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.9_random_CSDI.png" alt="synthetic_ST_separable_0.9_random_CSDI" style="zoom:72%;" />
-
-missing rate=0.9, missing pattern=block
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.9_block_CSDI.png" alt="synthetic_ST_separable_0.9_block_CSDI" style="zoom:72%;" />
-
