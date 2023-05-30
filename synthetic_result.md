@@ -42,7 +42,7 @@ $\eta(s,t)=\sum_{i=1}^{n_{\alpha}}\phi_i(s)\alpha_i(s)$.
 
 ## Randomly missing
 
-
+Randomly select $s$ from $1,\ldots, K$ and $t$ from $1,\ldots, L$, and set $Y(s, t)$ to be missing.
 
 ## Block missing
 
@@ -94,7 +94,7 @@ Set $\sigma_s=1/K$, $\sigma_t=1e^{-4}$.
 
 $B=3200$, $K=36$, $L=36$. 
 
-## Bayes Error
+### Bayes Error
 
 assume we know everything about the data generation process.
 
@@ -109,15 +109,13 @@ assume we know everything about the data generation process.
 
 
 
-## Spatio-Temporal Kriging
+### Spatio-Temporal Kriging
 
 Horribly slow
 
 
 
-
-
-## Mean imputer
+### Mean imputer
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -130,7 +128,7 @@ Horribly slow
 
 
 
-## Interpolation imputer
+### Interpolation imputer
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -143,7 +141,7 @@ Horribly slow
 
 
 
-## BIRNN
+### BIRNN
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -156,7 +154,7 @@ Horribly slow
 
 
 
-## CSDI
+### CSDI
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -169,3 +167,10 @@ Horribly slow
 
 
 
+## Setting 2: strong temporal and weak spatial correlation 
+
+Let $s$ be $K$ evenly spaced points between 0 and 1, $t$ be $L$ evenly spaced points between 0 and 1.
+
+Set $\sigma_s=1e^{-4}$, $\sigma_t=1/L$. 
+
+$B=3200$, $K=36$, $L=36$. 
