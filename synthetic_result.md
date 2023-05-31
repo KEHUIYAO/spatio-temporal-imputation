@@ -42,7 +42,7 @@ $\eta(s,t)=\sum_{i=1}^{n_{\alpha}}\phi_i(s)\alpha_i(s)$.
 
 ## Randomly missing
 
-
+Randomly select $s$ from $1,\ldots, K$ and $t$ from $1,\ldots, L$, and set $Y(s, t)$ to be missing.
 
 ## Block missing
 
@@ -94,7 +94,7 @@ Set $\sigma_s=1/K$, $\sigma_t=1e^{-4}$.
 
 $B=3200$, $K=36$, $L=36$. 
 
-## Bayes Error
+### Bayes Error
 
 assume we know everything about the data generation process.
 
@@ -109,15 +109,13 @@ assume we know everything about the data generation process.
 
 
 
-## Spatio-Temporal Kriging
+### Spatio-Temporal Kriging
 
 Horribly slow
 
 
 
-
-
-## Mean imputer
+### Mean imputer
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -130,7 +128,7 @@ Horribly slow
 
 
 
-## Interpolation imputer
+### Interpolation imputer
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -143,7 +141,7 @@ Horribly slow
 
 
 
-## BIRNN
+### BIRNN
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -156,7 +154,7 @@ Horribly slow
 
 
 
-## CSDI
+### CSDI
 
 | missing rate | missing pattern | MAE  |
 | ------------ | --------------- | ---- |
@@ -169,31 +167,10 @@ Horribly slow
 
 
 
-# Visualization of CSDI
+## Setting 2: strong temporal and weak spatial correlation 
 
-missing rate = 0.1, missing pattern = random
+Let $s$ be $K$ evenly spaced points between 0 and 1, $t$ be $L$ evenly spaced points between 0 and 1.
 
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.1_random_CSDI.png" alt="synthetic_ST_separable_0.1_random_CSDI" style="zoom: 33%;" />
+Set $\sigma_s=1e^{-4}$, $\sigma_t=1/L$. 
 
-missing rate = 0.1, missing pattern = block
-
-![synthetic_ST_separable_0.1_block_CSDI](/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.1_block_CSDI.png)
-
-missing rate = 0.5, missing pattern=random
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.5_random_CSDI.png" alt="synthetic_ST_separable_0.5_random_CSDI" style="zoom:72%;" />
-
-missing rate = 0.5, missing pattern=block
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.5_block_CSDI.png" alt="synthetic_ST_separable_0.5_block_CSDI" style="zoom:72%;" />
-
-
-
-missing rate=0.9, missing pattern=random
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.9_random_CSDI.png" alt="synthetic_ST_separable_0.9_random_CSDI" style="zoom:72%;" />
-
-missing rate=0.9, missing pattern=block
-
-<img src="/Users/kehuiyao/Desktop/CSDI/figures/synthetic_ST_separable_0.9_block_CSDI.png" alt="synthetic_ST_separable_0.9_block_CSDI" style="zoom:72%;" />
-
+$B=3200$, $K=36$, $L=36$. 

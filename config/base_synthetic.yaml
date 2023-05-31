@@ -15,12 +15,12 @@ diffusion:
   num_steps: 50
   schedule: "quad"
   time_layer:
-    type: "bilstm"
+    type: "transformer"
     nheads: 8
     hidden_size: 64
     attention_window: 5
   spatial_layer:
-    type: 'None'
+    type: 'diffconv'
     nheads: 8
     hidden_size: 64
     adj: './data/adj_matrix.npy'
