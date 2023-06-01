@@ -66,51 +66,51 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     def gaussian_covariance(x1, x2, length_scale):
         return np.exp(-0.5 * (x1 - x2) ** 2 / length_scale ** 2)
 
-    length_scale_space = rng.uniform(1/36, 1, size=B)
-    length_scale_time = rng.uniform(1/36, 1, size=B)
+    length_scale_space = 1 / 36  # strong spatial correlation
+    # length_scale_space = 1e-4  # weak spatial correlation
+
+    length_scale_time = 1 / 36  # strong temporal correlation
+    # length_scale_time = 1e-4  # weak temporal correlation
 
     jitter = 1e-6
 
     # Generate the covariance matrix for spatial domain
     # outer product of x1 and x2 based on function gaussian_covariance
-    spatial_cov = [gaussian_covariance(
+    spatial_cov = gaussian_covariance(
         x1=np.expand_dims(x, 1),
         x2=np.expand_dims(x, 0),
-        length_scale=lengthScaleSpace
-    ) + jitter * np.eye(len(x)) for lengthScaleSpace in length_scale_space]  # a list of B (K, K) arrays
+        length_scale=length_scale_space
+    )
 
     # outer product of t1 and t2 based on function gaussian_covariance
-    temporal_cov = [gaussian_covariance(
+    temporal_cov = gaussian_covariance(
         x1=np.expand_dims(t, 1),
         x2=np.expand_dims(t, 0),
-        length_scale=lengthScaleTime
-    ) + jitter * np.eye(len(t)) for lengthScaleTime in length_scale_time]  # a list of B (L, L) arrays
+        length_scale=length_scale_time
+    )
 
+    # avoid singular matrix
+    spatial_cov += jitter * np.eye(len(x))
+    temporal_cov += jitter * np.eye(len(t))
 
     # Compute Cholesky decomposition for spatial and temporal covariance matrices
-    L_spatial = [np.linalg.cholesky(spatialCov) for spatialCov in spatial_cov]  # a list of B (K, K) arrays
-    L_temporal = [np.linalg.cholesky(temporalCov) for temporalCov in temporal_cov]  # a list of B (L, L) arrays
+    L_spatial = np.linalg.cholesky(spatial_cov)
+    L_temporal = np.linalg.cholesky(temporal_cov)
 
     # Generate independent standard normal random variables
-    eta = [rng.normal(0, 1, size=(len(x) * len(t))) for _ in range(B)]  # a list of B (K*L)
-
+    eta = rng.normal(0, 1, size=(B, len(x) * len(t)))  # (B, K*L)
     # the Cholesky decomposition of the separable covariance function is
-    L_spatial_temporal = [np.kron(LSpatial, LTemporal) for LSpatial, LTemporal in zip(L_spatial, L_temporal)] # a list of B (K*L, K*L) arrays
-
+    L_spatial_temporal = np.kron(L_spatial, L_temporal)  # (K*L, K*L)
 
     # Generate correlated random variables by multiplying L and eta
-    eta = [np.einsum('ij, j->i', LSpatialTemporal, Eta) for LSpatialTemporal, Eta in zip(L_spatial_temporal, eta)]  # (B, K*L)
-
-    eta = np.stack(eta, axis=0)  # (B, K*L)
+    eta = np.einsum('ij, bj->bi', L_spatial_temporal, eta)  # (B, K*L)
 
     # reshape eta
     eta = eta.reshape(B, K, L)  # (B, K, L)
 
     ############################### Generate epsilon(s,t) ##########################################
-    # Generate independent standard normal random variable
-    noise_std = rng.uniform(0, 2, size=B)  # (B)
-    epsilon = [rng.normal(0, noiseStd, size=(K, L)) for noiseStd in noise_std]  # a list of B (K, L) arrays
-    epsilon = np.stack(epsilon, axis=0)  # (B, K, L)
+    # Generate independent standard normal random variables
+    epsilon = rng.normal(0, 2, size=(B, K, L))  # (B, K, L)
 
     ############################### Generate y(s,t) ##########################################
     # y = f + eta + epsilon
@@ -126,7 +126,7 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     y_standardized = (y - y_mean) / y_std
 
     # spatio-temporal covariance matrix of y
-    C_spatio_temporal = [LSpatialTemporal@LSpatialTemporal.T+ np.eye(len(x)*len(t)) / y_std**2 for LSpatialTemporal in L_spatial_temporal]
+    C_spatio_temporal = (L_spatial_temporal @ L_spatial_temporal.T + np.eye(len(x)*len(t))) / y_std**2
 
 
     # covariates time
@@ -148,7 +148,7 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
 if __name__ == "__main__":
     K = 36
     T = 36
-    B = 200
+    B = 1
     output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
     # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True)
     print(output.shape)
