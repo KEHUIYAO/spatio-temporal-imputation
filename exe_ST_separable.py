@@ -4,7 +4,6 @@ import datetime
 import json
 import yaml
 import os
-from scipy.spatial.distance import pdist, squareform
 import numpy as np
 from dataset_synthetic import generate_ST_data_with_separable_covariance
 from dataloader import get_dataloader

@@ -110,7 +110,7 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
 
     ############################### Generate epsilon(s,t) ##########################################
     # Generate independent standard normal random variables
-    epsilon = rng.normal(0, 2, size=(B, K, L))  # (B, K, L)
+    epsilon = rng.normal(0, 1, size=(B, K, L))  # (B, K, L)
 
     ############################### Generate y(s,t) ##########################################
     # y = f + eta + epsilon
