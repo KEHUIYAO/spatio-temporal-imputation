@@ -16,14 +16,14 @@ from utils import train, evaluate
 
 # missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 # missing_pattern_candidates = ['random', 'block', 'space_block', 'time_block']
-# model_candidates = ['mean', 'interpolation', 'birnn', 'CSDI', 'Kriging']
+# model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
 # time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
 # spatial_layer_candidates = ['None', 'diffconv']
 
 file = open('save/synthetic_ST_separable_strong_time_weak_space.txt', 'w')
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 missing_pattern_candidates = ['random', 'block']
-model_candidates = ['CSDI']
+model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
 
 K = 36
 L = 36
