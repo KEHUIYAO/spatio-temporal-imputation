@@ -19,7 +19,7 @@ from utils import train, evaluate
 # time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
 # spatial_layer_candidates = ['None', 'diffconv']
 
-file = open('save/synthetic_ST_separable_strong_time_strong_space.txt', 'w')
+file = open('save/synthetic_ST_basis_function.txt', 'w')
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 missing_pattern_candidates = ['random', 'block']
 model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI']
