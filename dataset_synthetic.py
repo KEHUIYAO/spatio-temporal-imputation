@@ -66,8 +66,8 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     def gaussian_covariance(x1, x2, length_scale):
         return np.exp(-0.5 * (x1 - x2) ** 2 / length_scale ** 2)
 
-    length_scale_space = 1 / 36  # strong spatial correlation
-    # length_scale_space = 1e-4  # weak spatial correlation
+    # length_scale_space = 1 / 36  # strong spatial correlation
+    length_scale_space = 1e-4  # weak spatial correlation
 
     length_scale_time = 1 / 36  # strong temporal correlation
     # length_scale_time = 1e-4  # weak temporal correlation
