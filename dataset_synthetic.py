@@ -196,9 +196,10 @@ def generate_ST_data_with_space_time_basis_functions(K, L, B, linear_additive=No
     ############################### Generate eta(s,t) ##########################################
     num_space_basis = 5
     num_time_basis = 5
-    num_space_time_basis = num_time_basis + num_space_basis
+    num_space_time_basis = num_space_basis * num_time_basis
     space_basis_func_list = []
     time_basis_func_list = []
+    space_time_basis_func_list = []
 
     # Generate space basis functions
     def space_basis_func_generator(i):
@@ -217,7 +218,12 @@ def generate_ST_data_with_space_time_basis_functions(K, L, B, linear_additive=No
                 return 0
         return time_basis_func
 
+    def space_time_basis_func_generator(i, j, space_basis_func_list, time_basis_func_list):
+        def space_time_basis_func(x, t):
+            return space_basis_func_list[i](x) * time_basis_func_list[j](t)
+        return space_time_basis_func
 
+    # Generate space basis functions
     for i in range(num_space_basis):
         space_basis_func_list.append(space_basis_func_generator(1 / num_space_basis * i))
 
@@ -225,7 +231,10 @@ def generate_ST_data_with_space_time_basis_functions(K, L, B, linear_additive=No
     for i in range(num_time_basis):
         time_basis_func_list.append(time_basis_func_generator(1 / num_time_basis * i))
 
-    space_time_basis_func_list = space_basis_func_list + time_basis_func_list
+    # Generate space-time basis functions
+    for i in range(num_space_basis):
+        for j in range(num_time_basis):
+            space_time_basis_func_list.append(space_time_basis_func_generator(i, j, space_basis_func_list, time_basis_func_list))
 
     # create a array of (num_space_basis, K, L)
     space_basis_values = np.zeros([num_space_basis, K, L])
@@ -241,14 +250,21 @@ def generate_ST_data_with_space_time_basis_functions(K, L, B, linear_additive=No
             for j in range(L):
                 time_basis_values[l, i, j] = time_basis_func_list[l](t[j])
 
-    # concatenate space and time basis values to get a array of (num_space_time_basis, K, L)
-    space_time_basis_values = np.concatenate([space_basis_values, time_basis_values], axis=0)
+    # create a array of (num_space_time_basis, K, L)
+    space_time_basis_values = np.zeros([num_space_time_basis, K, L])
+    for l in range(num_space_time_basis):
+        for i in range(K):
+            for j in range(L):
+                space_time_basis_values[l, i, j] = space_time_basis_func_list[l](x[i], t[j])
 
-    # Generate random coefficients with size (B, num_space_time_basis)
-    eta_coefficients = rng.normal(0, 1, size=(B, num_space_time_basis))
+    # concatenate space, time, and space-time basis values to get a array of (num_space_basis + num_time_basis + num_space_time_basis, K, L)
+    all_basis_values = np.concatenate([space_basis_values, time_basis_values, space_time_basis_values], axis=0)
 
-    # Generate eta(s,t) = sum_{l=1}^{num_space_time_basis} eta_coefficients[l] * space_time_basis_values[l]
-    eta = np.einsum('bn, nkl->bkl', eta_coefficients, space_time_basis_values)  # (B, K, L)
+    # Generate random coefficients with size (B, num_space_basis + num_time_basis + num_space_time_basis
+    eta_coefficients = rng.normal(0, 1, size=(B, num_space_basis + num_time_basis + num_space_time_basis))
+
+    # Generate eta(s,t) = sum_{l=1}^{num_space_basis+num_time_basis+num_space_time_basis} eta_coefficients[l] * all_basis_values[l]
+    eta = np.einsum('bn, nkl->bkl', eta_coefficients, all_basis_values)  # (B, K, L)
 
 
     ############################### Generate epsilon(s,t) ##########################################
