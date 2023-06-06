@@ -35,7 +35,7 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     x = np.linspace(0, 1, K)
     t = np.linspace(0, 1, L)
     ############################### Generate f(s,t) ##########################################
-    if linear_additive is not None and non_linear_additive is None:
+    if linear_additive is not None:
         # overall mean
         X0 = np.ones([B, K, L])
         # linear in time
@@ -69,9 +69,24 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
 
         # Generate f(s,t) = X(s,t)*beta(s,t)
         f = np.einsum('bklj, j->bkl', X, beta)  # (B, K, L)
-    elif linear_additive is not None and non_linear_additive is not None:
-        f = np.zeros([B, K, L])
-        X = None
+        if non_linear_additive is not None:
+            # generate non-linear additive effects using neural network, relu activation function
+            input_dim = X.shape[3]
+            hidden_dim = [32, 16]
+            output_dim = 1
+            W = [rng.uniform(-np.sqrt(1/input_dim), np.sqrt(1/input_dim), size=[input_dim, hidden_dim[0]]), rng.uniform(-np.sqrt(1/hidden_dim[0]), np.sqrt(1/hidden_dim[0]), size=[hidden_dim[0], hidden_dim[1]]), rng.uniform(-np.sqrt(1/hidden_dim[1]), np.sqrt(1/hidden_dim[1]), size=[hidden_dim[1], output_dim])]
+
+            def relu(x):
+                return np.maximum(x, 0)
+
+            g = relu(np.einsum('bklj, ji->bkli', X, W[0]))
+            g = relu(np.einsum('bkli, ij->bklj', g, W[1]))
+            g = np.einsum('bklj, ji->bkli', g, W[2])
+
+            g = g * 10  # scale up the non-linear effects
+
+            f = f + g  # linear + non-linear
+
     else:
         f = np.zeros([B, K, L])
         X = None
@@ -315,7 +330,7 @@ if __name__ == "__main__":
     T = 36
     B = 1
     # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
-    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True)
+    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True, non_linear_additive=True)
     # output, *_ = generate_ST_data_with_space_time_basis_functions(K, T, B, linear_additive=None, non_linear_additive=None, seed=42)
     print(output.shape)
 
