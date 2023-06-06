@@ -20,6 +20,7 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     3. linear in time: X2(s, tj)=tj for all s
     Optional:
     4. linear in space and time interaction: X3(si, tj)=si*tj
+    5. other covariates: X_other(s, t)
 
     If f(s, t) contains both linear additive effects or non-linear additive effects, say, f(s,t)=X(s,t)*beta(s,t) + g(s,t), where g(s,t) is a non-linear function. We can generate X(s, t) by incorporating some spatial basis functions and temporal basis functions in the model and randomly draw coefficents beta(s,t) from a multivariate normal distribution. We can generate g(s,t) ... (to be continued)
 
@@ -34,30 +35,46 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
     x = np.linspace(0, 1, K)
     t = np.linspace(0, 1, L)
     ############################### Generate f(s,t) ##########################################
-    if linear_additive is not None:
+    if linear_additive is not None and non_linear_additive is None:
         # overall mean
         X0 = np.ones([B, K, L])
         # linear in time
         X1 = np.zeros([B, K, L])
         for i in range(L):
-            X1[:, :, i] = t[i] * 20
+            X1[:, :, i] = t[i]
         # linear in space
         X2 = np.zeros([B, K, L])
         for i in range(K):
-            X2[:, i, :] = x[i] * 10
+            X2[:, i, :] = x[i]
 
-        # basis functions (B, K, L, 3)
-        X = np.stack([X0, X1, X2], axis=3)
+        # linear in space and time interaction
+        X3 = np.zeros([B, K, L])
+        for i in range(K):
+            for j in range(L):
+                X3[:, i, j] = x[i] * t[j]
+
+        # other covariates
+        X4 = np.zeros([B, K, L, 10])  # 10 other covariates
+        for i in range(10):
+            X4[:, :, :, i] = rng.normal(0, 1, size=[B, K, L])
+
+        # stack all basis functions
+        X = np.stack([X0, X1, X2, X3], axis=3)
+
+        # concatenate other covariates
+        X = np.concatenate([X, X4], axis=3)
 
         # Generate random coefficients
-        beta = rng.normal(0, 1, size=3)  # 3
+        beta = rng.normal(0, 1, size=X.shape[3])
 
         # Generate f(s,t) = X(s,t)*beta(s,t)
         f = np.einsum('bklj, j->bkl', X, beta)  # (B, K, L)
-    elif non_linear_additive is not None:
+    elif linear_additive is not None and non_linear_additive is not None:
         f = np.zeros([B, K, L])
+        X = None
     else:
         f = np.zeros([B, K, L])
+        X = None
 
 
 
@@ -127,20 +144,6 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
 
     # spatio-temporal covariance matrix of y
     C_spatio_temporal = (L_spatial_temporal @ L_spatial_temporal.T + np.eye(len(x)*len(t))) / y_std**2
-
-
-    # covariates time
-    X_time = np.zeros([B, K, L])
-    for i in range(L):
-        X_time[:, :, i] = t[i] * 20
-
-    # covariates space
-    X_space = np.zeros([B, K, L])
-    for i in range(K):
-        X_space[:, i, :] = x[i] * 10
-
-    X = np.stack([X_time, X_space], axis=3)  # (B, K, L, 2)
-
 
     return y_standardized, y_mean, y_std, spatial_cov, C_spatio_temporal, X
 
@@ -312,8 +315,8 @@ if __name__ == "__main__":
     T = 36
     B = 1
     # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
-    # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True)
-    output, *_ = generate_ST_data_with_space_time_basis_functions(K, T, B, linear_additive=None, non_linear_additive=None, seed=42)
+    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True)
+    # output, *_ = generate_ST_data_with_space_time_basis_functions(K, T, B, linear_additive=None, non_linear_additive=None, seed=42)
     print(output.shape)
 
 

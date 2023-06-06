@@ -4,31 +4,32 @@ import datetime
 import json
 import yaml
 import os
-from scipy.spatial.distance import pdist, squareform
 import numpy as np
 from dataset_synthetic import generate_ST_data_with_separable_covariance
 from dataloader import get_dataloader
 from main_model import CSDI_Covariates
 from birnn import BiRNN
+from bigcrnn import BiGCRNN
 from simple_imputer import MeanImputer, LinearInterpolationImputer, KrigingImputer
 from utils import train, evaluate
 
 # missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 # missing_pattern_candidates = ['random', 'block', 'space_block', 'time_block']
-# model_candidates = ['mean', 'interpolation', 'birnn', 'CSDI', 'Kriging']
+# model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
 # time_layer_candidates = [None, 'bilstm', 'transformer', 'longformer']
 # spatial_layer_candidates = ['None', 'diffconv']
 
+file = open('save/synthetic_ST_separable_linear_additive_effect.txt', 'w')
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 missing_pattern_candidates = ['random', 'block']
-model_candidates = ['birnn', 'CSDI']
-
+model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
 
 K = 36
 L = 36
 B = 3200
+covariate_dim = 14
 
-y, y_mean, y_std, adjacency_matrix, spatio_temporal_covariance_matrix, X = generate_ST_data_with_separable_covariance(K, L, B, seed=42, linear_additive=True)
+y, y_mean, y_std, adjacency_matrix, spatio_temporal_covariance_matrix, X, *_ = generate_ST_data_with_separable_covariance(K, L, B, seed=42, linear_additive_effect=True)
 # save adjacency matrix to data/adjaency_matrix.npy
 np.save('data/adj_matrix.npy', adjacency_matrix)
 training_data_ratio = 0.8
@@ -50,8 +51,7 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
             # current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             foldername = (
-                    "./save/synthetic_ST_covariates_separable" + '_' + str(missing_data_ratio) + "_" + str(
-                missing_pattern) + "_" + str(model) + "/"
+                    "./save/synthetic_ST_separable_linear_additive_effect" + '_' + str(missing_data_ratio) + "_" + str(missing_pattern) + "_" + str(model) + "/"
             )
 
             print('model folder:', foldername)
@@ -77,7 +77,7 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
 
             if model == 'CSDI':
-                model = CSDI_Covariates(config, device, target_dim=K, covariate_dim=2).to(device)
+                model = CSDI_Covariates(config, device, target_dim=K, covariate_dim=covariate_dim).to(device)
                 # you can change config here to train different models
                 train(
                     model,
@@ -88,7 +88,17 @@ for missing_data_ratio in missing_data_ratio_candidates:
                 )
 
             elif model == 'birnn':
-                model = BiRNN(covariate_size=2, config=config, device=device).to(device)
+                model = BiRNN(covariate_size=covariate_dim, config=config, device=device).to(device)
+                train(
+                    model,
+                    config["train"],
+                    train_loader,
+                    valid_loader=valid_loader,
+                    foldername=foldername,
+                )
+
+            elif model == 'bigcrnn':
+                model = BiGCRNN(target_size=K, covariate_size=covariate_dim, config=config, device=device, adj=adjacency_matrix-np.eye(K), hidden_size=64, num_layers=1, dropout=0.0).to(device)
                 train(
                     model,
                     config["train"],
@@ -109,7 +119,7 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
 
             # evaluate the model
-            evaluate(
+            res = evaluate(
                 model,
                 test_loader,
                 nsample=nsample,
@@ -117,3 +127,14 @@ for missing_data_ratio in missing_data_ratio_candidates:
                 mean_scaler=mean_scaler,
                 foldername=foldername
             )
+
+            file.write('------------------\n')
+            file.write('missing_data_ratio: ' + str(missing_data_ratio) + '\n')
+            file.write('missing_pattern: ' + str(missing_pattern) + '\n')
+            file.write('model: ' + str(model) + '\n')
+            file.write('rmse: ' + str(res['RMSE']) + '\n')
+            file.write('mae: ' + str(res['MAE']) + '\n')
+            file.write('crps: ' + str(res['CRPS']) + '\n')
+
+file.close()
+
