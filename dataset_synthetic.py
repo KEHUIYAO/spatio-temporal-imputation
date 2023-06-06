@@ -54,7 +54,7 @@ def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, no
                 X3[:, i, j] = x[i] * t[j]
 
         # other covariates
-        X4 = np.zeros([B, K, L, 10])  # 10 other covariates
+        X4 = np.zeros([B, K, L, 50])  # 50 other covariates
         for i in range(50):
             X4[:, :, :, i] = rng.normal(0, 1, size=[B, K, L])
 
