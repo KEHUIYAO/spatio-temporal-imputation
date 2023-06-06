@@ -22,14 +22,14 @@ from utils import train, evaluate
 file = open('save/synthetic_ST_separable_linear_additive_effect.txt', 'w')
 missing_data_ratio_candidates = [0.1, 0.5, 0.9]
 missing_pattern_candidates = ['random', 'block']
-model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI', 'Kriging']
+model_candidates = ['CSDI', 'Kriging']
 
 K = 36
 L = 36
 B = 3200
-covariate_dim = 14
+covariate_dim = 54
 
-y, y_mean, y_std, adjacency_matrix, spatio_temporal_covariance_matrix, X, *_ = generate_ST_data_with_separable_covariance(K, L, B, seed=42, linear_additive_effect=True)
+y, y_mean, y_std, adjacency_matrix, spatio_temporal_covariance_matrix, X, *_ = generate_ST_data_with_separable_covariance(K, L, B, seed=42, linear_additive=True)
 # save adjacency matrix to data/adjaency_matrix.npy
 np.save('data/adj_matrix.npy', adjacency_matrix)
 training_data_ratio = 0.8
