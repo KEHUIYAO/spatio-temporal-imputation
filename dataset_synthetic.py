@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import multivariate_normal
 
+import torch.nn as nn
+from nn.layers.gcn import GCN
+import torch
+
 
 def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, non_linear_additive=None, seed=42):
     """
@@ -321,6 +325,87 @@ def generate_ST_data_with_space_time_basis_functions(K, L, B, linear_additive=No
     return y_standardized, y_mean, y_std, spatial_cov, C_spatio_temporal, X
 
 
+def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
+    """
+    Generate spatio-temporal data with dynamic process model
+    Y(s, t) = g(Z(s, t)) + epsilon(s, t)
+    Z(s, t) = f(Z(:, t-1)) + eta(s, t)
+    :param K:
+    :param L:
+    :param B:
+    :param seed:
+    :return:
+    """
+    # define the latent process model using RNN and GCN
+    hidden_dim = 16
+    rnn = nn.LSTMCell(input_size=hidden_dim, hidden_size=hidden_dim)  # define the RNN
+
+    gcn = GCN(input_size=hidden_dim, hidden_size=hidden_dim, output_size=hidden_dim)  # define the GCN
+
+    # define the neural network that maps the latent process to the observed process
+    latent_to_observed = nn.Sequential(
+        nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(),
+        nn.Linear(hidden_dim, hidden_dim),
+        nn.ReLU(),
+        nn.Linear(hidden_dim, 1)
+    )
+
+
+    # generate an adjacency matrix
+    adjacency_matrix = np.zeros((K, K))
+    for i in range(K):
+        for j in range(K):
+            adjacency_matrix[i, j] = np.exp(-np.abs(i - j) / 5)
+
+    adjacency_matrix = torch.from_numpy(adjacency_matrix).float()
+
+    # initialize the input (B, K, L) by sampling from standard normal distribution
+    Z = np.random.normal(0, 1, size=(B, K, L, hidden_dim))
+
+    # convert the input to torch tensor
+    Z = torch.from_numpy(Z).float()
+
+    # pass the input through the RNN and GCN
+    rnn.eval()
+    gcn.eval()
+    latent_to_observed.eval()
+
+    for i in range(L):
+        if i == 0:
+            pass
+        else:
+            tmp = Z[:, :, i-1, :]  # (B, K, hidden_dim
+            tmp = torch.reshape(tmp, [B * K, hidden_dim])  # (B*K, hidden_dim)
+            tmp = rnn(tmp)[0]  # (B*K, hidden_dim)
+            tmp = torch.reshape(tmp, [B, K, hidden_dim])  # (B, K, hidden_dim)
+
+            tmp = gcn(tmp, adjacency_matrix)  # (B, K, hidden_dim)
+
+            Z[:, :, i, :] = tmp
+
+    # generate the epsilon using torch
+    epsilon = torch.randn(B, K, L, 1)
+
+    # generate the observation
+    y = latent_to_observed(Z) + epsilon  # (B, K, L, 1)
+
+    # remove the last dimension, and convert to numpy array
+    y = y.detach().numpy()[:, :, :, 0]
+
+    # Plot the generated data
+    plt.imshow(y[0, :, :], cmap='jet')
+    plt.show()
+
+    # standardize the data, record the mean and std
+    y_mean = np.mean(y)
+    y_std = np.std(y)
+    y_standardized = (y - y_mean) / y_std
+
+
+
+    return y_standardized, y_mean, y_std
+
 
 
 
@@ -330,8 +415,10 @@ if __name__ == "__main__":
     T = 36
     B = 1
     # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
-    output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True, non_linear_additive=True)
+    # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True, non_linear_additive=True)
     # output, *_ = generate_ST_data_with_space_time_basis_functions(K, T, B, linear_additive=None, non_linear_additive=None, seed=42)
+
+    output, *_ = generate_ST_data_with_dynamic_process_model(K, T, B, seed=42)
     print(output.shape)
 
 
