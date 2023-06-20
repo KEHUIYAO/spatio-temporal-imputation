@@ -346,9 +346,7 @@ def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
     latent_to_observed = nn.Sequential(
         nn.Linear(hidden_dim, hidden_dim),
         nn.ReLU(),
-        nn.Linear(hidden_dim, hidden_dim),
-        nn.ReLU(),
-        nn.Linear(hidden_dim, 1)
+        nn.Linear(hidden_dim, K),
     )
 
 
@@ -360,11 +358,8 @@ def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
 
     adjacency_matrix = torch.from_numpy(adjacency_matrix).float()
 
-    # initialize the input (B, K, L) by sampling from standard normal distribution
-    Z = np.random.normal(0, 1, size=(B, K, L, hidden_dim))
-
-    # convert the input to torch tensor
-    Z = torch.from_numpy(Z).float()
+    # Z is the latent process, intialized as standard normal
+    Z = torch.randn(B, hidden_dim, L)  # (B, hidden_dim, L)
 
     # pass the input through the RNN and GCN
     rnn.eval()
@@ -375,23 +370,22 @@ def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
         if i == 0:
             pass
         else:
-            tmp = Z[:, :, i-1, :]  # (B, K, hidden_dim
-            tmp = torch.reshape(tmp, [B * K, hidden_dim])  # (B*K, hidden_dim)
-            tmp = rnn(tmp)[0]  # (B*K, hidden_dim)
-            tmp = torch.reshape(tmp, [B, K, hidden_dim])  # (B, K, hidden_dim)
-
-            tmp = gcn(tmp, adjacency_matrix)  # (B, K, hidden_dim)
-
-            Z[:, :, i, :] = tmp
+            tmp = rnn(Z[:, :, i-1])[0]  # (B, hidden_dim)
+            Z[:, :, i] = (tmp - torch.mean(tmp)) / torch.std(tmp)  # normalize the latent process
 
     # generate the epsilon using torch
-    epsilon = torch.randn(B, K, L, 1)
+    epsilon = torch.randn(B, K, L)
 
     # generate the observation
-    y = latent_to_observed(Z) + epsilon  # (B, K, L, 1)
+    Z = Z.permute(0, 2, 1)  # (B, L, hidden_dim)
+    y = latent_to_observed(Z)  # (B, L, K)
+    # normalize the observation
+    y = (y - torch.mean(y)) / torch.std(y)
+    y = y.permute(0, 2, 1)  # (B, K, L)
+    y = y + epsilon  # (B, K, L)
 
-    # remove the last dimension, and convert to numpy array
-    y = y.detach().numpy()[:, :, :, 0]
+    # convert to numpy array
+    y = y.detach().numpy()
 
     # Plot the generated data
     plt.imshow(y[0, :, :], cmap='jet')
