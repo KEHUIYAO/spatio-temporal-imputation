@@ -8,6 +8,7 @@ from torch import nn
 from nn.layers.gcn import GCN
 import torch
 import copy
+import timesynth as ts
 
 
 def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, non_linear_additive=None, seed=42):
@@ -404,11 +405,31 @@ def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
     y_std = np.std(y)
     y_standardized = (y - y_mean) / y_std
 
-
-
     return y_standardized, y_mean, y_std
 
+def generate_ST_data_with_complex_time_seires_model(K, L, B, seed=42):
+    time_sampler = ts.TimeSampler(stop_time=35)
+    regular_time_samples = time_sampler.sample_regular_time(num_points=36)
+    sinusoid = ts.signals.Sinusoidal(frequency=0.25)
+    white_noise = ts.noise.GaussianNoise(std=0.3)
+    timeseries = ts.TimeSeries(sinusoid, noise_generator=white_noise)
 
+    y = np.zeros((B, K, L))
+    for b in range(B):
+        for k in range(K):
+            samples, _, _ = timeseries.sample(regular_time_samples)
+            y[b, k, :] = samples
+
+    # Plot the generated data
+    plt.imshow(y[0, :, :], cmap='jet')
+    plt.show()
+
+    # standardize the data, record the mean and std
+    y_mean = np.mean(y)
+    y_std = np.std(y)
+    y_standardized = (y - y_mean) / y_std
+
+    return y_standardized, y_mean, y_std
 
 
 
@@ -419,8 +440,8 @@ if __name__ == "__main__":
     # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42)
     # output, *_ = generate_ST_data_with_separable_covariance(K, T, B, seed=42, linear_additive=True, non_linear_additive=True)
     # output, *_ = generate_ST_data_with_space_time_basis_functions(K, T, B, linear_additive=None, non_linear_additive=None, seed=42)
-
-    output, *_ = generate_ST_data_with_dynamic_process_model(K, T, B, seed=42)
+    # output, *_ = generate_ST_data_with_dynamic_process_model(K, T, B, seed=42)
+    output, *_ = generate_ST_data_with_complex_time_seires_model(K, T, B, seed=42)
     print(output.shape)
 
 
