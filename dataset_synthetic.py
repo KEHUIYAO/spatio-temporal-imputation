@@ -410,14 +410,14 @@ def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
 def generate_ST_data_with_complex_time_seires_model(K, L, B, seed=42):
     time_sampler = ts.TimeSampler(stop_time=35)
     regular_time_samples = time_sampler.sample_regular_time(num_points=36)
-    sinusoid = ts.signals.Sinusoidal(frequency=0.25)
-    white_noise = ts.noise.GaussianNoise(std=0.3)
-    timeseries = ts.TimeSeries(sinusoid, noise_generator=white_noise)
+
+    gp = ts.signals.GaussianProcess(kernel='Matern', nu=3. / 2)
+    gp_series = ts.TimeSeries(signal_generator=gp)
 
     y = np.zeros((B, K, L))
     for b in range(B):
         for k in range(K):
-            samples, _, _ = timeseries.sample(regular_time_samples)
+            samples = gp_series.sample(regular_time_samples)[0]
             y[b, k, :] = samples
 
     # Plot the generated data
