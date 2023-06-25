@@ -20,13 +20,13 @@ from utils import train, evaluate
 # spatial_layer_candidates = ['None', 'diffconv']
 
 file = open('save/synthetic_ST_dynamic_process.txt', 'w')
-missing_data_ratio_candidates = [0.1, 0.5, 0.9]
-missing_pattern_candidates = ['random', 'block']
-model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI']
+missing_data_ratio_candidates = [0.1]
+missing_pattern_candidates = ['prediction']
+model_candidates = ['mean', 'birnn', 'CSDI']
 
 K = 36
 L = 36
-B = 3200
+B = 32
 
 y, y_mean, y_std, *_ = generate_ST_data_with_dynamic_process_model(K, L, B)
 

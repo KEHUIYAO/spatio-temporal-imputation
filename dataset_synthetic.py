@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import multivariate_normal
 
-import torch.nn as nn
+from torch import nn
 from nn.layers.gcn import GCN
 import torch
+import copy
 
 
 def generate_ST_data_with_separable_covariance(K, L, B, linear_additive=None, non_linear_additive=None, seed=42):
@@ -337,17 +338,20 @@ def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
     :return:
     """
     # define the latent process model using RNN and GCN
-    hidden_dim = 16
+    hidden_dim = 64
     rnn = nn.LSTMCell(input_size=hidden_dim, hidden_size=hidden_dim)  # define the RNN
 
     gcn = GCN(input_size=hidden_dim, hidden_size=hidden_dim, output_size=hidden_dim)  # define the GCN
 
     # define the neural network that maps the latent process to the observed process
-    latent_to_observed = nn.Sequential(
+    mlp = nn.Sequential(
         nn.Linear(hidden_dim, hidden_dim),
         nn.ReLU(),
-        nn.Linear(hidden_dim, K),
+        nn.LayerNorm([hidden_dim])
     )
+
+    latent_to_observed = nn.ModuleList([copy.deepcopy(mlp) for _ in range(5)] +
+                                        [nn.Linear(hidden_dim, K)])
 
 
     # generate an adjacency matrix
@@ -378,7 +382,11 @@ def generate_ST_data_with_dynamic_process_model(K, L, B, seed=42):
 
     # generate the observation
     Z = Z.permute(0, 2, 1)  # (B, L, hidden_dim)
-    y = latent_to_observed(Z)  # (B, L, K)
+
+    for layer in latent_to_observed:
+        Z = layer(Z)
+
+    y = Z  # (B, L, K)
     # normalize the observation
     y = (y - torch.mean(y)) / torch.std(y)
     y = y.permute(0, 2, 1)  # (B, K, L)
