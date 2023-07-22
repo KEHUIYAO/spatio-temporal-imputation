@@ -19,8 +19,10 @@ class BiRNN(nn.Module):
         input_size = covariate_size + 2  # 2 for observed data and mask
 
         if task_type == 'mit':
-            self.rnn = nn.LSTM(input_size, hidden_size, num_layers, bidirectional=True, dropout=dropout)
-            self.out = nn.Conv1d(in_channels=2*hidden_size, out_channels=1, kernel_size=1)
+            self.input = nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=1)
+            self.rnn = nn.LSTM(hidden_size, hidden_size, num_layers, bidirectional=True, dropout=dropout)
+            self.out = nn.ModuleList([nn.Conv1d(in_channels=2*hidden_size, out_channels=hidden_size, kernel_size=1), nn.Conv1d(in_channels=hidden_size, out_channels=1, kernel_size=1)])
+
         elif task_type == 'ort':
             self.rnn_forward = nn.LSTM(input_size, hidden_size, num_layers, dropout=dropout)
             self.rnn_backward = nn.LSTM(input_size, hidden_size, num_layers, dropout=dropout)
@@ -67,12 +69,16 @@ class BiRNN(nn.Module):
         else:
             total_input = torch.cat([non_missing_data, cond_mask.unsqueeze(1)], dim=1)
 
-        total_input = total_input.permute(3, 0, 2, 1).reshape(L, B*K, -1)
-
+        total_input = total_input.permute(3, 0, 2, 1).reshape(L, B*K, -1)  # L x B*K x (C+2)
+        total_input = total_input.permute(1, 2, 0)  # B*K x (C+2) x L
+        total_input = self.input(total_input)  # B*K x H x L
+        total_input = total_input.permute(2, 0, 1)  # L x B*K x H
         predicted = self.rnn(total_input)[0]  # L x B*K x 2H
         # permute to the input for the convolutional layer
         predicted = predicted.permute(1, 2, 0)  # B*K x 2H x L
-        predicted = self.out(predicted)  # B*K x 1 x L
+        predicted = self.out[0](predicted)  # B*K x H x L
+        predicted = self.out[1](predicted)  # B*K x 1 x L
+
         # permute back to the original order BxKxL
         predicted = predicted.reshape(B, K, L)
 
@@ -199,7 +205,7 @@ class BiRNN(nn.Module):
         if self.missing_pattern is None:
             self.missing_pattern = 'random'
 
-        if self.missing_pattern == 'random':
+        if self.missing_pattern == 'random':  # randomly sample a mask for each batch
             rand_for_mask = torch.rand_like(observed_mask) * observed_mask
             rand_for_mask = rand_for_mask.reshape(len(rand_for_mask), -1)
             for i in range(len(observed_mask)):
@@ -208,50 +214,36 @@ class BiRNN(nn.Module):
                 num_masked = round(num_observed * sample_ratio)
                 rand_for_mask[i][rand_for_mask[i].topk(num_masked).indices] = -1
             cond_mask = (rand_for_mask > 0).reshape(observed_mask.shape).float()
-        elif self.missing_pattern == 'space_block':  #  all spatial locations at one specific time point are either observed or masked
-            B, K, L = observed_mask.size()  # (B, K, L)
-            cond_mask = observed_mask.clone()
-            # each batch has a different missing ratio
-            for i in range(len(observed_mask)):
-                # randomly generate a number from 0 to 1
-                sample_ratio = np.random.rand()  # missing ratio
-                temp = torch.rand(size=(1, L), device=self.device) < sample_ratio
-                # repeat the mask for all spatial points
-                cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
-        elif self.missing_pattern == 'time_block':  #  all time points at one specific spatial location are either observed or masked
-            B, K, L = observed_mask.size()  # (B, K, L)
-            cond_mask = observed_mask.clone()
-            # each batch has a different missing ratio
-            for i in range(len(observed_mask)):
-                # randomly generate a number from 0 to 1
-                sample_ratio = np.random.rand()
-                temp = torch.rand(size=(K, 1), device=self.device) < sample_ratio
-                # repeat the mask for all spatial points
-                cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
+
         elif self.missing_pattern == 'block':
             B, K, L = observed_mask.size()  # (B, K, L)
             cond_mask = observed_mask.clone()
             # each batch has a different missing ratio
             for i in range(len(observed_mask)):
                 sample_ratio = np.random.rand()  # missing ratio
-                expected_num_masked = round(K * L * sample_ratio)
+                expected_num_masked = round(observed_mask[i].sum() * sample_ratio)
                 cur_num_masked = 0
                 # if block size is provided in config, use it
                 if 'time_block_size' in self.config['model']:
                     l_block_size = self.config['model']['time_block_size']
                 else:
-                    l_block_size = np.random.randint(1, L + 1)
+                    l_block_size = np.random.randint(1, L+1)
 
                 if 'space_block_size' in self.config['model']:
                     k_block_size = self.config['model']['space_block_size']
                 else:
-                    k_block_size = np.random.randint(1, K + 1)
+                    k_block_size = 1
 
                 while cur_num_masked < expected_num_masked:
-                    l_start = np.random.randint(0, L - l_block_size + 1)
-                    k_start = np.random.randint(0, K - k_block_size + 1)
+                    l_start = np.random.randint(0, L-l_block_size+1)
+                    k_start = np.random.randint(0, K-k_block_size+1)
+
+                    # if cond_mask is 0, then we don't count it
+                    cur_num_masked += cond_mask[i, k_start:k_start+k_block_size, l_start:l_start+l_block_size].sum().item()
+
+                    # set the mask to 0
                     cond_mask[i, k_start:k_start + k_block_size, l_start:l_start + l_block_size] = 0
-                    cur_num_masked += l_block_size * k_block_size
+
 
         else:
             raise NotImplementedError
@@ -298,14 +290,18 @@ class BiRNN(nn.Module):
             else:
                 total_input = torch.cat([non_missing_data, cond_mask.unsqueeze(1)], dim=1)
 
-            total_input = total_input.permute(3, 0, 2, 1).reshape(L, B * K, C+2)
+            total_input = total_input.permute(3, 0, 2, 1).reshape(L, B * K, C+2)  # L x B*K x (C+2)
 
 
             if self.task_type == 'mit':
+                total_input = total_input.permute(1, 2, 0)  # B*K x (C+2) x L
+                total_input = self.input(total_input)  # B*K x H x L
+                total_input = total_input.permute(2, 0, 1)  # L x B*K x H
                 predicted = self.rnn(total_input)[0]  # L x B*K x 2H
                 # permute to the input for the convolutional layer
                 predicted = predicted.permute(1, 2, 0)  # B*K x 2H x L
-                predicted = self.out(predicted)  # B*K x 1 x L
+                predicted = self.out[0](predicted)  # B*K x H x L
+                predicted = self.out[1](predicted)  # B*K x 1 x L
                 # permute back to the original order BxKxL
                 predicted = predicted.reshape(B, 1, K, L)  # B x 1 x K x L
             elif self.task_type == 'ort':

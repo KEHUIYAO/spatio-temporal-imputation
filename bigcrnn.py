@@ -79,7 +79,7 @@ class BiGCRNN(nn.Module):
     def forward_time(self, x):
         # x: B x C x K x L
         B, C, K, L = x.shape
-        total_input = x.permute(3, 0, 2, 1).reshape(L, B*K, -1)
+        total_input = x.permute(3, 0, 2, 1).reshape(L, B*K, -1)  # L x B*K x C
         predicted = self.rnn(total_input)[0]  # L x B*K x 2H
         # permute to the input for the convolutional layer
         predicted = predicted.permute(1, 2, 0)  # B*K x 2H x L
@@ -129,7 +129,7 @@ class BiGCRNN(nn.Module):
         if self.missing_pattern is None:
             self.missing_pattern = 'random'
 
-        if self.missing_pattern == 'random':
+        if self.missing_pattern == 'random':  # randomly sample a mask for each batch
             rand_for_mask = torch.rand_like(observed_mask) * observed_mask
             rand_for_mask = rand_for_mask.reshape(len(rand_for_mask), -1)
             for i in range(len(observed_mask)):
@@ -138,50 +138,36 @@ class BiGCRNN(nn.Module):
                 num_masked = round(num_observed * sample_ratio)
                 rand_for_mask[i][rand_for_mask[i].topk(num_masked).indices] = -1
             cond_mask = (rand_for_mask > 0).reshape(observed_mask.shape).float()
-        elif self.missing_pattern == 'space_block':  #  all spatial locations at one specific time point are either observed or masked
-            B, K, L = observed_mask.size()  # (B, K, L)
-            cond_mask = observed_mask.clone()
-            # each batch has a different missing ratio
-            for i in range(len(observed_mask)):
-                # randomly generate a number from 0 to 1
-                sample_ratio = np.random.rand()  # missing ratio
-                temp = torch.rand(size=(1, L), device=self.device) < sample_ratio
-                # repeat the mask for all spatial points
-                cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
-        elif self.missing_pattern == 'time_block':  #  all time points at one specific spatial location are either observed or masked
-            B, K, L = observed_mask.size()  # (B, K, L)
-            cond_mask = observed_mask.clone()
-            # each batch has a different missing ratio
-            for i in range(len(observed_mask)):
-                # randomly generate a number from 0 to 1
-                sample_ratio = np.random.rand()
-                temp = torch.rand(size=(K, 1), device=self.device) < sample_ratio
-                # repeat the mask for all spatial points
-                cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
+
         elif self.missing_pattern == 'block':
             B, K, L = observed_mask.size()  # (B, K, L)
             cond_mask = observed_mask.clone()
             # each batch has a different missing ratio
             for i in range(len(observed_mask)):
                 sample_ratio = np.random.rand()  # missing ratio
-                expected_num_masked = round(K * L * sample_ratio)
+                expected_num_masked = round(observed_mask[i].sum() * sample_ratio)
                 cur_num_masked = 0
                 # if block size is provided in config, use it
                 if 'time_block_size' in self.config['model']:
                     l_block_size = self.config['model']['time_block_size']
                 else:
-                    l_block_size = np.random.randint(1, L + 1)
+                    l_block_size = np.random.randint(1, L+1)
 
                 if 'space_block_size' in self.config['model']:
                     k_block_size = self.config['model']['space_block_size']
                 else:
-                    k_block_size = np.random.randint(1, K + 1)
+                    k_block_size = 1
 
                 while cur_num_masked < expected_num_masked:
-                    l_start = np.random.randint(0, L - l_block_size + 1)
-                    k_start = np.random.randint(0, K - k_block_size + 1)
+                    l_start = np.random.randint(0, L-l_block_size+1)
+                    k_start = np.random.randint(0, K-k_block_size+1)
+
+                    # if cond_mask is 0, then we don't count it
+                    cur_num_masked += cond_mask[i, k_start:k_start+k_block_size, l_start:l_start+l_block_size].sum().item()
+
+                    # set the mask to 0
                     cond_mask[i, k_start:k_start + k_block_size, l_start:l_start + l_block_size] = 0
-                    cur_num_masked += l_block_size * k_block_size
+
 
         else:
             raise NotImplementedError
