@@ -21,8 +21,8 @@ from utils import train, evaluate
 
 file = open('save/synthetic_ST_dynamic_process.txt', 'w')
 missing_data_ratio_candidates = [0.1]
-missing_pattern_candidates = ['prediction']
-model_candidates = ['mean', 'birnn', 'CSDI']
+missing_pattern_candidates = ['random', 'block']
+model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI']
 
 K = 36
 L = 36

@@ -10,6 +10,9 @@ from dataloader import get_dataloader
 from main_model import CSDI_Covariates
 from birnn import BiRNN
 from bigcrnn import BiGCRNN
+from brits import BRITS
+from grin import GRIN
+
 from simple_imputer import MeanImputer, LinearInterpolationImputer, KrigingImputer
 from utils import train, evaluate
 
@@ -20,13 +23,16 @@ from utils import train, evaluate
 # spatial_layer_candidates = ['None', 'diffconv']
 
 file = open('save/synthetic_ST_basis_function.txt', 'w')
-missing_data_ratio_candidates = [0.1, 0.5, 0.9]
-missing_pattern_candidates = ['random', 'block']
-model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI']
+# missing_data_ratio_candidates = [0.1, 0.5, 0.9]
+# missing_pattern_candidates = ['random', 'block']
+# model_candidates = ['mean', 'interpolation', 'birnn', 'bigcrnn', 'CSDI']
+missing_data_ratio_candidates = [0.1]
+missing_pattern_candidates = ['random']
+model_candidates = ['mean', 'interpolation']
 
 K = 36
 L = 36
-B = 3200
+B = 32
 
 y, y_mean, y_std, *_ = generate_ST_data_with_space_time_basis_functions(K, L, B, seed=42)
 
@@ -111,6 +117,31 @@ for missing_data_ratio in missing_data_ratio_candidates:
                     valid_loader=valid_loader,
                     foldername=foldername,
                 )
+            elif model == 'brits':
+                model = BRITS(n_steps=L, n_features=K, rnn_hidden_size=64, device=device, config=config).to(device)
+                train(
+                    model,
+                    config["train"],
+                    train_loader,
+                    valid_loader=valid_loader,
+                    foldername=foldername,
+                )
+            elif model == 'grin':
+                model = GRIN(adj=adjacency_matrix - np.eye(K),
+                             d_in=1,
+                             d_hidden=64,
+                             d_ff=64,
+                             ff_dropout=0,
+                             config=config,
+                             device=device).to(device)
+                train(
+                    model,
+                    config["train"],
+                    train_loader,
+                    valid_loader=valid_loader,
+                    foldername=foldername,
+                )
+
 
             elif model == 'mean':
                 model = MeanImputer(device=device)

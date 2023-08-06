@@ -10,6 +10,8 @@ from dataloader import get_dataloader
 from main_model import CSDI_Covariates
 from birnn import BiRNN
 from bigcrnn import BiGCRNN
+from brits import BRITS
+from grin import GRIN
 from simple_imputer import MeanImputer, LinearInterpolationImputer, KrigingImputer
 from utils import train, evaluate
 
@@ -21,14 +23,16 @@ from utils import train, evaluate
 
 file = open('save/synthetic_ST_complex_ts.txt', 'w')
 missing_data_ratio_candidates = [0.1]
-missing_pattern_candidates = ['prediction']
-model_candidates = ['mean', 'birnn', 'CSDI']
+missing_pattern_candidates = ['random']
 
-K = 36
+model_candidates = ['birnn', 'brits']
+
+K = 30
 L = 36
 B = 32
 
 y, y_mean, y_std, *_ = generate_ST_data_with_complex_time_seires_model(K, L, B, seed=42)
+print(y_std)
 
 # create a adjacency matrix with exponential decay
 adjacency_matrix = np.zeros((K, K))
@@ -57,7 +61,7 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
             # current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             foldername = (
-                    "./save/synthetic_ST_dynamic" + '_' + str(missing_data_ratio) + "_" + str(missing_pattern) + "_" + str(model) + "/"
+                    "./save/synthetic_ST_complex_ts" + '_' + str(missing_data_ratio) + "_" + str(missing_pattern) + "_" + str(model) + "/"
             )
 
             print('model folder:', foldername)
@@ -75,10 +79,11 @@ for missing_data_ratio in missing_data_ratio_candidates:
                  training_data_ratio=training_data_ratio,
                  batch_size=batch_size,
                  device=device,
-                 missing_pattern=missing_pattern
+                 missing_pattern=missing_pattern,
+                 time_block_size=5
                 )
 
-            config['model']['missing_pattern'] = missing_pattern
+            # config['model']['missing_pattern'] = missing_pattern
 
 
             if model == 'CSDI':
@@ -104,6 +109,30 @@ for missing_data_ratio in missing_data_ratio_candidates:
 
             elif model == 'bigcrnn':
                 model = BiGCRNN(target_size=K, covariate_size=0, config=config, device=device, adj=adjacency_matrix-np.eye(K), hidden_size=64, num_layers=1, dropout=0.0).to(device)
+                train(
+                    model,
+                    config["train"],
+                    train_loader,
+                    valid_loader=valid_loader,
+                    foldername=foldername,
+                )
+            elif model == 'brits':
+                model = BRITS(n_steps=L, n_features=K, rnn_hidden_size=64, device=device, config=config).to(device)
+                train(
+                    model,
+                    config["train"],
+                    train_loader,
+                    valid_loader=valid_loader,
+                    foldername=foldername,
+                )
+            elif model == 'grin':
+                model = GRIN(adj=adjacency_matrix-np.eye(K),
+                            d_in=1,
+                            d_hidden=64,
+                            d_ff=64,
+                            ff_dropout=0,
+                            config=config,
+                            device=device).to(device)
                 train(
                     model,
                     config["train"],
