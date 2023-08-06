@@ -71,33 +71,14 @@ class CSDI_base(nn.Module):
                 num_masked = round(num_observed * sample_ratio)
                 rand_for_mask[i][rand_for_mask[i].topk(num_masked).indices] = -1
             cond_mask = (rand_for_mask > 0).reshape(observed_mask.shape).float()
-        elif self.missing_pattern == 'space_block':  #  all spatial locations at one specific time point are either observed or masked
-            B, K, L = observed_mask.size()  # (B, K, L)
-            cond_mask = observed_mask.clone()
-            # each batch has a different missing ratio
-            for i in range(len(observed_mask)):
-                # randomly generate a number from 0 to 1
-                sample_ratio = np.random.rand()  # missing ratio
-                temp = torch.rand(size=(1, L), device=self.device) < sample_ratio
-                # repeat the mask for all spatial points
-                cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
-        elif self.missing_pattern == 'time_block':  #  all time points at one specific spatial location are either observed or masked
-            B, K, L = observed_mask.size()  # (B, K, L)
-            cond_mask = observed_mask.clone()
-            # each batch has a different missing ratio
-            for i in range(len(observed_mask)):
-                # randomly generate a number from 0 to 1
-                sample_ratio = np.random.rand()
-                temp = torch.rand(size=(K, 1), device=self.device) < sample_ratio
-                # repeat the mask for all spatial points
-                cond_mask[i, :, :] = cond_mask[i, :, :] * temp.expand(K, L)
+
         elif self.missing_pattern == 'block':
             B, K, L = observed_mask.size()  # (B, K, L)
             cond_mask = observed_mask.clone()
             # each batch has a different missing ratio
             for i in range(len(observed_mask)):
                 sample_ratio = np.random.rand()  # missing ratio
-                expected_num_masked = round(K * L * sample_ratio)
+                expected_num_masked = round(observed_mask[i].sum().item() * sample_ratio)
                 cur_num_masked = 0
                 # if block size is provided in config, use it
                 if 'time_block_size' in self.config['model']:
@@ -108,13 +89,17 @@ class CSDI_base(nn.Module):
                 if 'space_block_size' in self.config['model']:
                     k_block_size = self.config['model']['space_block_size']
                 else:
-                    k_block_size = np.random.randint(1, K+1)
+                    k_block_size = 1
 
                 while cur_num_masked < expected_num_masked:
                     l_start = np.random.randint(0, L-l_block_size+1)
                     k_start = np.random.randint(0, K-k_block_size+1)
-                    cond_mask[i, k_start:k_start+k_block_size, l_start:l_start+l_block_size] = 0
-                    cur_num_masked += l_block_size * k_block_size
+
+                    # if cond_mask is 0, then we don't count it
+                    cur_num_masked += cond_mask[i, k_start:k_start+k_block_size, l_start:l_start+l_block_size].sum().item()
+
+                    # set the mask to 0
+                    cond_mask[i, k_start:k_start + k_block_size, l_start:l_start + l_block_size] = 0
 
 
         else:
