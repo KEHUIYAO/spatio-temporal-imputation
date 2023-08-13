@@ -169,7 +169,7 @@ class CSDI_GRIN(nn.Module):
 
         noise = noise.unsqueeze(1)  # (B,1,K,L)
         cond_obs = (cond_mask * observed_data).unsqueeze(1)  # (B,1,K,L)
-        noisy_data = (noisy_data * (observed_mask - cond_mask)).unsqueeze(1)  # (B,1,K,L)
+        noisy_data = noisy_data.unsqueeze(1)  # (B,1,K,L)
         cond_mask = cond_mask.unsqueeze(1)  # (B,1,K,L)
         observed_mask = observed_mask.unsqueeze(1)  # (B,1,K,L)
         observed_data = observed_data.unsqueeze(1)  # (B,1,K,L)
@@ -179,15 +179,15 @@ class CSDI_GRIN(nn.Module):
 
 
         if is_train == 1:
-            target_mask = observed_mask - cond_mask
+            target_mask = observed_mask
         else:
             target_mask = observed_mask - cond_mask
 
-        residual = (noise - predicted) * target_mask
-
+        residual_1 = (noise - predicted) * target_mask
+        residual_2 = (observed_data - imputed) * target_mask
 
         num_eval = target_mask.sum()
-        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
+        loss = ((residual_1 ** 2).sum() + (residual_2 ** 2).sum()) / (num_eval if num_eval > 0 else 1)
         return loss
 
     def impute(self, observed_data, cond_mask, side_info, n_samples):
@@ -205,7 +205,7 @@ class CSDI_GRIN(nn.Module):
             current_sample = torch.randn_like(observed_data)
 
             for t in range(self.num_steps - 1, -1, -1):
-                noisy_data = current_sample * (1-cond_mask)
+                noisy_data = current_sample
                 predicted, _ = self.diffmodel(cond_obs, cond_mask, side_info, noisy_data, torch.tensor([t]).to(self.device))  # (B,1,K,L)
 
                 coeff1 = 1 / self.alpha_hat[t] ** 0.5
@@ -316,7 +316,7 @@ class diff_grin(nn.Module):
 
         K = config['model']['K']
 
-        # create a numpy adjacency matrix of K points, using gaussian kernel
+        # create an numpy adjacency matrix of K points, using gaussian kernel
         adj = np.zeros((K, K))
         for i in range(K):
             for j in range(K):
@@ -341,7 +341,7 @@ class diff_grin(nn.Module):
                  impute_only_holes=True,
                  d_v=1)
 
-        self.out = nn.Conv1d(2 * config['model']['d_hidden'], 1, kernel_size=1)
+        self.out = nn.Conv1d(4 * config['model']['d_hidden'] + 2, 1, kernel_size=1)
 
 
 
