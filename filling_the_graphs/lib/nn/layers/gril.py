@@ -74,7 +74,7 @@ class GRIL(nn.Module):
         self.u_size = int(u_size) if u_size is not None else 0
         self.v_size = int(v_size) if v_size is not None else 0
         self.n_layers = int(n_layers)
-        rnn_input_size = self.hidden_size # input + mask + u_size + v_size
+        rnn_input_size = 2 * self.input_size + self.u_size + self.v_size # input + mask + u_size + v_size
 
         # Spatio-temporal encoder (rnn_input_size -> hidden_size)
         self.cells = nn.ModuleList()
@@ -99,7 +99,8 @@ class GRIL(nn.Module):
                                               order=decoder_order,
                                               attention_block=global_att)
 
-        self.input_projection = nn.Conv1d(in_channels=self.input_size + 2, out_channels=self.hidden_size, kernel_size=1)
+        if self.v_size > 0:
+            self.v_decoder = nn.Conv1d(in_channels=self.v_size, out_channels=self.hidden_size, kernel_size=1)
 
         # Hidden state initialization embedding
         if n_nodes is not None:
@@ -108,9 +109,13 @@ class GRIL(nn.Module):
             self.register_parameter('h0', None)
 
     def init_hidden_states(self, n_nodes):
-
         return None
 
+    def init_hidden_states_based_on_v(self, v_s):
+        h = []
+        for l in range(self.n_layers):
+            h.append(self.v_decoder(v_s))
+        return h
 
     def get_h0(self, x):
         if self.h0 is not None:
@@ -139,51 +144,64 @@ class GRIL(nn.Module):
         elif not isinstance(h, list):
             h = [*h]
 
+        # init hidden state using v
+        if v is not None:
+            h = self.init_hidden_states_based_on_v(v[..., 0])
+
         # Temporal conv
         predictions, imputations, states = [], [], []
         representations = []
         for step in range(steps):
-
-            if step == 0:
-                x_s = torch.zeros_like(x[..., step]).to(x.device)
-                m_s = torch.zeros_like(mask[..., step]).to(mask.device)
-            else:
-                x_s = x[..., step-1]
-                m_s = mask[..., step-1]
-                # if mask[..., step-1] is True, use x_s, otherwise use x_hat
-                x_s = torch.where(mask[..., step-1], x_s, xs_hat_1)
-
+            x_s = x[..., step]
+            m_s = mask[..., step]
+            h_s = h[-1]
             u_s = u[..., step] if u is not None else None
             v_s = v[..., step] if v is not None else None
-            inputs = [x_s, m_s]
 
-            if v_s is not None:
-                inputs.append(v_s)
 
-            inputs = torch.cat(inputs, dim=1)
 
-            inputs = self.input_projection(inputs)
-
-            inputs = inputs + u_s
-
-            h = self.update_state(inputs, h, adj)
-
-            h_s = h[-1]
-            states.append(torch.stack(h, dim=0))
-            representations.append(h_s)
+            # concot u and v
+            if u_s is not None and v_s is not None:
+                tmp = torch.cat([u_s, v_s], dim=1)
+            elif u_s is None and v_s is not None:
+                tmp = v_s
+            elif u_s is not None and v_s is None:
+                tmp = u_s
+            else:
+                tmp = None
 
             # firstly impute missing values with predictions from state
             xs_hat_1 = self.first_stage(h_s)
+            # fill missing values in input with prediction
+            x_s = torch.where(m_s, x_s, xs_hat_1)
+            # prepare inputs
+            # retrieve maximum information from neighbors
+            xs_hat_2, repr_s = self.spatial_decoder(x=x_s, m=m_s, h=h_s, u=tmp, adj=adj,
+                                                    cached_support=cached_support)  # receive messages from neighbors (no self-loop!)
 
-            imputations.append(xs_hat_1)
+            if v_s is not None:
+                repr_s = torch.cat([repr_s, v_s], dim=1)
+
+
+            # readout of imputation state + mask to retrieve imputations
+            # prepare inputs
+            x_s = torch.where(m_s, x_s, xs_hat_2)
+
+            inputs = [x_s, m_s]
+            if u_s is not None:
+                inputs.append(u_s)
+            if v is not None:
+                tmp = v[..., step+1] if step < steps-1 else v[..., step]
+                inputs.append(tmp)
+
+            inputs = torch.cat(inputs, dim=1)  # x_hat_2 + mask + exogenous
+            # update state with original sequence filled using imputations
+            h = self.update_state(inputs, h, adj)
+            # store imputations and states
+            imputations.append(xs_hat_2)
             predictions.append(xs_hat_1)
-
-
-
-
-
-
-
+            states.append(torch.stack(h, dim=0))
+            representations.append(repr_s)
 
 
         # Aggregate outputs -> [batch, features, nodes, steps]
@@ -250,7 +268,7 @@ class BiGRIL(nn.Module):
         if merge == 'mlp':
             self._impute_from_states = True
             self.out = nn.Sequential(
-                nn.Conv2d(in_channels=2 * hidden_size + input_size,
+                nn.Conv2d(in_channels=4 * hidden_size + input_size + embedding_size + 2 * v_size,
                           out_channels=ff_size, kernel_size=1),
                 nn.ReLU(),
                 nn.Dropout(ff_dropout),

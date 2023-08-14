@@ -24,9 +24,9 @@ class GRIN(nn.Module):
         super(GRIN, self).__init__()
         self.config = config
         self.device = device
-        self.target_strategy = config['model']['target_strategy']
-        if 'missing_pattern' in config['model']:
-            self.missing_pattern = config['model']['missing_pattern']
+        self.target_strategy = config['train']['target_strategy']
+        if 'missing_pattern' in config['train']:
+            self.missing_pattern = config['train']['missing_pattern']
         else:
             self.missing_pattern = None
 
@@ -85,7 +85,7 @@ class GRIN(nn.Module):
         cond_mask = cond_mask.bool()
 
 
-        predicted = self.model(non_missing_data, cond_mask)  # B, L, K, 1
+        predicted, _, _ = self.model(non_missing_data, cond_mask)  # B, L, K, 1
 
         # permute back to B, K, L
         predicted = predicted.permute(0, 3, 2, 1)  # B, 1, K, L
@@ -217,7 +217,7 @@ class GRIN(nn.Module):
             cond_mask = cond_mask.bool()
 
 
-            predicted = self.model(non_missing_data, cond_mask)  # B, L, K, 1
+            predicted, _, _ = self.model(non_missing_data, cond_mask)  # B, L, K, 1
 
             # permute to (B, 1, K, L)
             predicted = predicted.permute(0, 3, 2, 1)  # B, 1, K, L
