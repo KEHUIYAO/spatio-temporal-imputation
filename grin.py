@@ -24,9 +24,9 @@ class GRIN(nn.Module):
         super(GRIN, self).__init__()
         self.config = config
         self.device = device
-        self.target_strategy = config['train']['target_strategy']
-        if 'missing_pattern' in config['train']:
-            self.missing_pattern = config['train']['missing_pattern']
+        self.target_strategy = config['model']['target_strategy']
+        if 'missing_pattern' in config['model']:
+            self.missing_pattern = config['model']['missing_pattern']
         else:
             self.missing_pattern = None
 
