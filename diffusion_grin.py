@@ -660,7 +660,7 @@ class CSDI_GRIN(nn.Module):
 
 
         if is_train == 1:
-            target_mask = observed_mask - cond_mask
+            target_mask = observed_mask
         else:
             target_mask = observed_mask - cond_mask
 
