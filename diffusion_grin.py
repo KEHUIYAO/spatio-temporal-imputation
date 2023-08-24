@@ -7,18 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from einops import rearrange
-from torch.autograd import Variable
-
+from utils import reverse_tensor
 epsilon = 1e-6
 
-def reverse_tensor(tensor=None, axis=-1):
-    if tensor is None:
-        return None
-    if tensor.dim() <= 1:
-        return tensor
-    indices = range(tensor.size()[axis])[::-1]
-    indices = Variable(torch.LongTensor(indices), requires_grad=False).to(tensor.device)
-    return tensor.index_select(axis, indices)
 
 
 class SpatialConvOrderK(nn.Module):
@@ -151,26 +142,24 @@ class SpatialDecoder(nn.Module):
     def __init__(self, d_in, d_model, d_out, support_len, order=1, attention_block=False, nheads=2, dropout=0.):
         super(SpatialDecoder, self).__init__()
         self.order = order
-        self.lin_in = nn.Conv1d(d_in, d_model, kernel_size=1)
-        self.graph_conv = SpatialConvOrderK(c_in=d_model, c_out=d_model,
+        self.graph_conv = SpatialConvOrderK(c_in=d_in, c_out=d_model,
                                             support_len=support_len * order, order=1, include_self=False)
         if attention_block:
             self.spatial_att = SpatialAttention(d_in=d_model,
                                                 d_model=d_model,
                                                 nheads=nheads,
                                                 dropout=dropout)
-            self.lin_out = nn.Conv1d(3 * d_model, d_model, kernel_size=1)
+            self.lin_out = nn.Conv1d(2 * d_model, d_model, kernel_size=1)
         else:
             self.register_parameter('spatial_att', None)
-            self.lin_out = nn.Conv1d(2 * d_model, d_model, kernel_size=1)
+            self.lin_out = nn.Conv1d(2* d_model, d_model, kernel_size=1)
+
         self.read_out = nn.Conv1d(2 * d_model, d_out, kernel_size=1)
         self.activation = nn.PReLU()
         self.adj = None
 
-    def forward(self, x, m, h, u, adj, cached_support=False):
+    def forward(self, x, h, adj, cached_support=False):
         # [batch, channels, nodes]
-        x_in = [x, m, h] if u is None else [x, m, u, h]
-        x_in = torch.cat(x_in, 1)
         if self.order > 1:
             if cached_support and (self.adj is not None):
                 adj = self.adj
@@ -178,7 +167,9 @@ class SpatialDecoder(nn.Module):
                 adj = SpatialConvOrderK.compute_support_orderK(adj, self.order, include_self=False, device=x_in.device)
                 self.adj = adj if cached_support else None
 
-        x_in = self.lin_in(x_in)
+        x_in = [x, h]
+        x_in = torch.cat(x_in, 1)
+
         out = self.graph_conv(x_in, adj)
         if self.spatial_att is not None:
             # [batch, channels, nodes] -> [batch, steps, nodes, features]
@@ -209,7 +200,7 @@ class GRIL(nn.Module):
         super(GRIL, self).__init__()
         self.input_size = int(input_size)
         self.hidden_size = int(hidden_size)
-        self.u_size = int(u_size) if u_size is not None else 0
+        self.u_size = self.hidden_size
         self.v_size = int(v_size) if v_size is not None else 0
         self.n_layers = int(n_layers)
         rnn_input_size = self.hidden_size # input + mask + u_size + v_size
@@ -230,14 +221,14 @@ class GRIL(nn.Module):
         self.first_stage = nn.Conv1d(in_channels=self.hidden_size, out_channels=self.input_size, kernel_size=1)
 
         # Spatial decoder (rnn_input_size + hidden_size -> hidden_size)
-        self.spatial_decoder = SpatialDecoder(d_in=rnn_input_size + self.hidden_size,
+        self.spatial_decoder = SpatialDecoder(d_in= 2 * self.hidden_size,
                                               d_model=self.hidden_size,
                                               d_out=self.input_size,
                                               support_len=2,
                                               order=decoder_order,
                                               attention_block=global_att)
 
-        self.input_projection = nn.Conv1d(in_channels=self.input_size + 2, out_channels=self.hidden_size, kernel_size=1)
+        self.input_projection = nn.Conv1d(in_channels=self.input_size * 3, out_channels=self.hidden_size, kernel_size=1)
 
         # Hidden state initialization embedding
         if n_nodes is not None:
@@ -246,7 +237,6 @@ class GRIL(nn.Module):
             self.register_parameter('h0', None)
 
     def init_hidden_states(self, n_nodes):
-
         return None
 
 
@@ -281,7 +271,6 @@ class GRIL(nn.Module):
         predictions, imputations, states = [], [], []
         representations = []
         for step in range(steps):
-
             if step == 0:
                 x_s = torch.zeros_like(x[..., step]).to(x.device)
                 m_s = torch.zeros_like(mask[..., step]).to(mask.device)
@@ -289,7 +278,7 @@ class GRIL(nn.Module):
                 x_s = x[..., step-1]
                 m_s = mask[..., step-1]
                 # if mask[..., step-1] is True, use x_s, otherwise use x_hat
-                x_s = torch.where(mask[..., step-1], x_s, xs_hat_1)
+                x_s = torch.where(mask[..., step-1], x_s, xs_hat_2)
 
             u_s = u[..., step] if u is not None else None
             v_s = v[..., step] if v is not None else None
@@ -307,13 +296,29 @@ class GRIL(nn.Module):
             h = self.update_state(inputs, h, adj)
 
             h_s = h[-1]
-            states.append(torch.stack(h, dim=0))
-            representations.append(h_s)
+
+
 
             # firstly impute missing values with predictions from state
             xs_hat_1 = self.first_stage(h_s)
 
-            imputations.append(xs_hat_1)
+            # secondly impute missing values given spatial context
+            x_s = x[..., step]
+            m_s = mask[..., step]
+            x_s = torch.where(m_s, x_s, xs_hat_1)
+            inputs = [x_s, m_s]
+            if v_s is not None:
+                inputs.append(v_s)
+            inputs = torch.cat(inputs, dim=1)
+            inputs = self.input_projection(inputs)
+            inputs = inputs + u_s
+
+
+            xs_hat_2, repr_s = self.spatial_decoder(x=inputs, h=h_s, adj=adj, cached_support=cached_support)
+
+            states.append(torch.stack(h, dim=0))
+            representations.append(repr_s)
+            imputations.append(xs_hat_2)
             predictions.append(xs_hat_1)
 
         # Aggregate outputs -> [batch, features, nodes, steps]
@@ -380,7 +385,7 @@ class BiGRIL(nn.Module):
         if merge == 'mlp':
             self._impute_from_states = True
             self.out = nn.Sequential(
-                nn.Conv2d(in_channels=2 * hidden_size + input_size,
+                nn.Conv2d(in_channels=4 * hidden_size,
                           out_channels=ff_size, kernel_size=1),
                 nn.ReLU(),
                 nn.Dropout(ff_dropout),
@@ -409,7 +414,7 @@ class BiGRIL(nn.Module):
         repr = torch.cat([fwd_repr, bwd_repr], dim=1)
 
         if self._impute_from_states:
-            inputs = [fwd_repr, bwd_repr, mask]
+            inputs = [fwd_repr, bwd_repr]
             if self.emb is not None:
                 b, *_, s = fwd_repr.shape  # fwd_h: [batches, channels, nodes, steps]
                 inputs += [self.emb.view(1, *self.emb.shape, 1).expand(b, -1, -1, s)]  # stack emb for batches and steps
@@ -825,7 +830,7 @@ class diff_grin(nn.Module):
         # self.out = nn.Conv1d(2 * config['model']['d_hidden'], 1, kernel_size=1)
 
         self.out = nn.Sequential(
-            nn.Conv1d(in_channels=2 * config['model']['d_hidden'],
+            nn.Conv1d(in_channels=4 * config['model']['d_hidden'],
                       out_channels=config['model']['d_hidden'], kernel_size=1),
             nn.ReLU(),
             nn.Conv1d(in_channels=config['model']['d_hidden'], out_channels=1, kernel_size=1)
@@ -845,25 +850,25 @@ class diff_grin(nn.Module):
         # Then, you can use the repeat method to replicate the tensor along the desired dimensions
         diffusion_emb = diffusion_emb.repeat(int(B/diffusion_emb.size(0)), 1, K, L) # Now the shape is (B, C, K, L)
 
-        if side_info is not None:
-            side_info = torch.cat([side_info, diffusion_emb], dim=1)
-        else:
-            side_info = diffusion_emb
-
-
 
         x = cond_obs
         mask = cond_mask.clone()
 
         # reshape to (B, L, K, -1) for GRINet
         x = x.permute(0, 3, 2, 1)  # (B, L, K, 2)
-        side_info = side_info.permute(0, 3, 2, 1)  # (B, L, K, 2)
+
+        diffusion_emb = diffusion_emb.permute(0, 3, 2, 1)  # (B, L, K, 2)
         mask = mask.permute(0, 3, 2, 1)  # (B, L, K, 2)
         mask = mask.bool()
         noisy_data = noisy_data.permute(0, 3, 2, 1)  # (B, L, K, 1)
 
+        if side_info is not None:
+            side_info = side_info.permute(0, 3, 2, 1)  # (B, L, K, 2)
+            side_info = torch.cat([side_info, noisy_data], dim=3)
+        else:
+            side_info = noisy_data
 
-        imputation, _, repr = self.model(x, mask=mask, u=side_info, v=noisy_data)  # (B, L, K, *)
+        imputation, _, repr = self.model(x, mask=mask, u=diffusion_emb, v=side_info)  # (B, L, K, *)
 
         imputation = imputation.permute(0, 3, 2, 1)  # (B, *, K, L)
         repr = repr.permute(0, 3, 2, 1)  # (B, *, K, L)
